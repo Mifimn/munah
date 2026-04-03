@@ -19,18 +19,74 @@ const playfair = Playfair_Display({
   display: 'swap',
 });
 
+// --- ADVANCED CLINICAL SEO & OG CONFIGURATION ---
 export const metadata: Metadata = {
-  title: "naturalcareherbalmedicine | Clinical Botanical Apothecary",
-  description: "Clinically-backed botanical remedies and ancestral herbal medicine. Access our digital ledger for targeted healing and professional consultations.",
-  keywords: ["herbal medicine", "apothecary", "natural cures", "clinical botanicals", "Nigeria herbal medicine"],
-  authors: [{ name: "naturalcareherbalmedicine" }],
-  viewport: "width=device-width, initial-scale=1",
+  metadataBase: new URL("https://naturalcareherbalmedicine.com"),
+  title: {
+    default: "naturalcareherbalmedicine | Clinical Botanical Apothecary",
+    template: "%s | naturalcareherbalmedicine",
+  },
+  description: "Bridging ancestral botanical wisdom with modern clinical protocols. Hand-formulated remedies curated by Medinah Olagunju for targeted cellular healing.",
+  keywords: [
+    "Medinah Olagunju",
+    "herbal medicine Nigeria",
+    "botanical remedies",
+    "natural apothecary",
+    "ancestral healing",
+    "clinical herbalism",
+    "natural cures",
+    "Mifimn",
+    "Musa Ayoola Shittu"
+  ],
+  // Medinah is the owner/author for SEO authority
+  authors: [{ name: "Medinah Olagunju", url: "https://naturalcareherbalmedicine.com" }],
+  // Mifimn (Musa) is the technical creator/architect
+  creator: "Shittu Musa Ayoola (Mifimn)",
+  publisher: "naturalcareherbalmedicine",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+
+  // Open Graph (Social Media Sharing)
   openGraph: {
-    title: "naturalcareherbalmedicine",
-    description: "Premium Digital Apothecary & Botanical Research Library",
+    title: "naturalcareherbalmedicine | Digital Botanical Ledger",
+    description: "Explore clinical archives of hand-formulated botanical remedies. Curated by Medinah Olagunju.",
     url: "https://naturalcareherbalmedicine.com",
     siteName: "naturalcareherbalmedicine",
+    images: [
+      {
+        url: "/og-image.jpg", // Ensure this 1200x630px image exists in /public
+        width: 1200,
+        height: 630,
+        alt: "naturalcareherbalmedicine Botanical Archive by Medinah Olagunju",
+      },
+    ],
+    locale: "en_US",
     type: "website",
+  },
+
+  // Twitter/TikTok Card Integration
+  twitter: {
+    card: "summary_large_image",
+    title: "naturalcareherbalmedicine | Clinical Apothecary",
+    description: "Botanical science and ancestral healing by Medinah Olagunju.",
+    images: ["/og-image.jpg"],
+    creator: "@naturalcureherbalmedicine",
+  },
+
+  // Search Engine Robot Protocols
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 

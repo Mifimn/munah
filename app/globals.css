@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  /* The "Modern Botanical" Color Palette */
+  --color-botanical-green: #1B3022;
+  --color-earth-silk: #F5F2ED;
+  --color-clinical-white: #FFFFFF;
+  --color-accent-leaf: #2C5535; /* Slightly lighter green for hover states */
+}
+
+/* Global Styling & Reset */
+body {
+  background-color: var(--color-earth-silk);
+  color: var(--color-botanical-green);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

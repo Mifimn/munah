@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function ConsultationToggle() {
   const [isVisible, setIsVisible] = useState(false);
-  const WHATSAPP_NUMBER = "1234567890"; // Replace with your actual number
+  const WHATSAPP_NUMBER = "2348066004959"; // Replace with your actual number
 
   useEffect(() => {
     const handleScroll = () => {

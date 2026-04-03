@@ -20,7 +20,7 @@ export default function Footer() {
             <div className="flex items-center gap-3">
               <Leaf size={18} className="opacity-60" />
               <span className="font-serif text-lg tracking-widest lowercase">
-                naturalcareherbalmedicine
+                naturalcureherbalmedicine
               </span>
             </div>
             <p className="text-[11px] leading-relaxed text-clinical-white/40 max-w-xs font-light uppercase tracking-wider">
@@ -63,7 +63,7 @@ export default function Footer() {
         <div className="pt-8 border-t border-clinical-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex flex-col md:flex-row items-center gap-2 md:gap-6">
             <p className="text-[9px] uppercase tracking-[0.2em] text-clinical-white/20">
-              © 2026 naturalcareherbalmedicine
+              © 2026 naturalcureherbalmedicine
             </p>
             <div className="w-[1px] h-3 bg-clinical-white/10 hidden md:block" />
             <Link 

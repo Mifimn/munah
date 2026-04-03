@@ -20,7 +20,7 @@ export default function HeroSection() {
             <Leaf size={18} className="text-clinical-white" />
           </div>
           <span className="font-serif text-base sm:text-lg tracking-widest text-clinical-white lowercase opacity-80 group-hover:opacity-100 transition-opacity">
-            naturalcareherbalmedicine
+            naturalcureherbalmedicine
           </span>
         </Link>
       </motion.div>

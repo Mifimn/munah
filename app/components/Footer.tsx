@@ -10,7 +10,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="w-full bg-botanical-green text-clinical-white pt-20 pb-10 px-6 sm:px-12 border-t border-clinical-white/10">
+    <footer className="relative z-50 w-full bg-botanical-green text-clinical-white pt-20 pb-10 px-6 sm:px-12 border-t border-clinical-white/10">
       <div className="max-w-[1400px] mx-auto">
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 mb-20">

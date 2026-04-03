@@ -34,7 +34,7 @@ export default function WellnessLibrary() {
     <main className="relative min-h-screen bg-botanical-green overflow-hidden">
 
       {/* 1. FIXED VIDEO BACKGROUND */}
-      <div className="fixed inset-0 z-0">
+      <div className="fixed inset-0 z-0 pointer-events-none">
         <video 
           autoPlay loop muted playsInline
           className="w-full h-full object-cover opacity-40"

@@ -25,7 +25,7 @@ export default function Footer() {
             </div>
             <p className="text-[11px] leading-relaxed text-clinical-white/40 max-w-xs font-light uppercase tracking-wider">
               Bridging ancestral botanical wisdom with modern clinical protocols. 
-              Curated by <span className="text-clinical-white/70">Medinah Olagunju</span>.
+              Curated by <span className="text-clinical-white/70">Modina Olagunju</span>.
             </p>
           </div>
 
@@ -51,8 +51,8 @@ export default function Footer() {
           {/* Column 3: The Protocol (Single Contact) */}
           <div className="lg:text-right">
             <p className="text-[9px] uppercase tracking-[0.3em] text-clinical-white/20 mb-6 font-bold">Primary Consultation</p>
-            <a href="https://wa.me/2348146245326" className="group inline-flex flex-col lg:items-end gap-1">
-              <span className="font-serif text-2xl group-hover:italic transition-all tracking-tight">+234 814 624 5326</span>
+            <a href="https://wa.me/2348066004959" className="group inline-flex flex-col lg:items-end gap-1">
+              <span className="font-serif text-2xl group-hover:italic transition-all tracking-tight">+234 806 600 4959</span>
               <span className="text-[9px] text-clinical-white/30 uppercase tracking-[0.2em]">Secure WhatsApp Line</span>
             </a>
           </div>

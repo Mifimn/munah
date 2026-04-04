@@ -23,12 +23,13 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   metadataBase: new URL("https://naturalcureherbalmedicine.com"),
   title: {
+    // We keep your title exact, but Google uses the Site Name for the top label
     default: "naturalcureherbalmedicine | Clinical Botanical Apothecary",
     template: "%s | naturalcureherbalmedicine",
   },
-  description: "Bridging ancestral botanical wisdom with modern clinical protocols. Hand-formulated remedies curated by Medinah Olagunju for targeted cellular healing.",
+  description: "Bridging ancestral botanical wisdom with modern clinical protocols. Hand-formulated remedies curated by Modina Olagunju for targeted cellular healing.",
   keywords: [
-    "Medinah Olagunju",
+    "Modina Olagunju",
     "herbal medicine Nigeria",
     "botanical remedies",
     "natural apothecary",
@@ -38,11 +39,9 @@ export const metadata: Metadata = {
     "Mifimn",
     "Musa Ayoola Shittu"
   ],
-  // Medinah is the owner/author for SEO authority
-  authors: [{ name: "Medinah Olagunju", url: "https://naturalcureherbalmedicine.com" }],
-  // Mifimn (Musa) is the technical creator/architect
+  authors: [{ name: "Modina Olagunju", url: "https://naturalcureherbalmedicine.com" }],
   creator: "Shittu Musa Ayoola (Mifimn)",
-  publisher: "naturalcureherbalmedicine",
+  publisher: "Natural Cure Herbal Medicine",
   formatDetection: {
     email: false,
     address: false,
@@ -52,31 +51,30 @@ export const metadata: Metadata = {
   // Open Graph (Social Media Sharing)
   openGraph: {
     title: "naturalcureherbalmedicine | Digital Botanical Ledger",
-    description: "Explore clinical archives of hand-formulated botanical remedies. Curated by Medinah Olagunju.",
+    description: "Explore clinical archives of hand-formulated botanical remedies. Curated by Modina Olagunju.",
     url: "https://naturalcureherbalmedicine.com",
-    siteName: "naturalcureherbalmedicine",
+    // CRITICAL FIX: Use spaces here so Google sees a Brand Name, not a URL
+    siteName: "Natural Cure Herbal Medicine", 
     images: [
       {
-        url: "/og-image.jpg", // Ensure this 1200x630px image exists in /public
+        url: "/og-image.jpg", 
         width: 1200,
         height: 630,
-        alt: "naturalcureherbalmedicine Botanical Archive by Medinah Olagunju",
+        alt: "naturalcureherbalmedicine Botanical Archive by Modina Olagunju",
       },
     ],
     locale: "en_US",
     type: "website",
   },
 
-  // Twitter/TikTok Card Integration
   twitter: {
     card: "summary_large_image",
     title: "naturalcureherbalmedicine | Clinical Apothecary",
-    description: "Botanical science and ancestral healing by Medinah Olagunju.",
+    description: "Botanical science and ancestral healing by Modina Olagunju.",
     images: ["/og-image.jpg"],
     creator: "@naturalcureherbalmedicine",
   },
 
-  // Search Engine Robot Protocols
   robots: {
     index: true,
     follow: true,
@@ -95,23 +93,34 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  
+  // --- THE "ZOHO" SECRET: JSON-LD STRUCTURED DATA ---
+  // This explicitly tells Google the exact Site Name to display above the URL
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "Natural Cure Herbal Medicine",
+    "alternateName": ["naturalcureherbalmedicine", "Natural Cure Apothecary"],
+    "url": "https://naturalcureherbalmedicine.com/"
+  };
+
   return (
     <html lang="en" className="scroll-smooth">
+      <head>
+        {/* Injecting the Structured Data directly into the HTML Head */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body 
         className={`${inter.variable} ${playfair.variable} font-sans bg-earth-silk text-botanical-green antialiased min-h-screen flex flex-col`}
       >
-        {/* 1. Global Navigation (Icon Logo & Structured Index) */}
         <Sidebar />
-
-        {/* 2. Contextual Consultation (Floating WhatsApp - Fades in on scroll) */}
         <ConsultationToggle />
-
-        {/* 3. Main Content Area */}
         <main className="flex-grow relative">
           {children}
         </main>
-
-        {/* 4. Clinical Footer (Contact Protocols & Social Archives) */}
         <Footer />
       </body>
     </html>

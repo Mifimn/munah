@@ -2,119 +2,163 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Leaf, ArrowRight, Lock, Mail, User } from "lucide-react";
+import { Leaf, ArrowRight, Lock, Mail, User, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  // --- DEMO LOGIN HANDLER ---
+  const handleDemoAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    // Simulate a clinical authentication delay
+    setTimeout(() => {
+      setIsLoading(false);
+      router.push("/"); // Redirects to homepage
+    }, 2000);
+  };
 
   return (
-    <main className="min-h-screen bg-earth-silk flex items-center justify-center p-4 sm:p-6 pt-32 pb-20">
-      <div className="w-full max-w-[1100px] bg-botanical-green grid grid-cols-1 lg:grid-cols-2 rounded-sm overflow-hidden shadow-2xl relative">
+    <main className="relative min-h-screen flex items-center justify-center p-4 sm:p-6 overflow-hidden bg-botanical-green">
+      
+      {/* 1. LIGHT GRADIENT VIDEO BACKGROUND (Library Style) */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline
+          className="w-full h-full object-cover opacity-50"
+        >
+          <source src="/auth-bg-video.mp4" type="video/mp4" />
+        </video>
+        
+        {/* Soft, light green gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-botanical-green/40 via-botanical-green/10 to-botanical-green/30 backdrop-blur-[2px]" />
+      </div>
 
-        {/* --- LEFT SIDE: CINEMATIC VIDEO BRANDING --- */}
-        {/* We changed bg-botanical-green/50 to bg-black to make the video stand out */}
-        <div className="hidden lg:flex flex-col justify-between p-16 relative overflow-hidden bg-black">
+      {/* 2. AUTH CARD - Compact Height & Refined Padding */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative z-10 w-full max-w-[1000px] bg-botanical-green/10 backdrop-blur-2xl grid grid-cols-1 lg:grid-cols-2 rounded-sm overflow-hidden border border-clinical-white/10 shadow-2xl"
+      >
 
-          {/* Background Video Layer */}
-          <div className="absolute inset-0 z-0">
-            <video
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
-              className="w-full h-full object-cover opacity-100" // Set opacity to 100% to test visibility
-            >
-              <source src="/auth-bg-video.mp4" type="video/mp4" />
-            </video>
-
-            {/* Dark tint so text is readable, but video is visible */}
-            <div className="absolute inset-0 bg-black/40 z-10" />
-          </div>
-
-          {/* Branding Content - Added z-20 to stay on top of video */}
-          <div className="relative z-20">
+        {/* --- LEFT SIDE: BRANDING (Hidden on Mobile) --- */}
+        <div className="hidden lg:flex flex-col justify-between p-12 border-r border-clinical-white/5 bg-black/10">
+          <div>
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 1 }}
             >
-              <Leaf size={32} className="text-clinical-white mb-8" />
+              <Leaf size={28} className="text-clinical-white mb-6 opacity-80" />
             </motion.div>
-            <h2 className="font-serif text-5xl text-clinical-white leading-tight">
-              Access the <br /> <span className="italic opacity-70 font-light">Clinical Archives</span>
+            <h2 className="font-serif text-4xl text-clinical-white leading-tight">
+              Access the <br /> 
+              <span className="italic opacity-60 font-light text-3xl">Clinical Archives</span>
             </h2>
           </div>
 
-          <div className="relative z-20 flex flex-col gap-4">
-            <div className="w-12 h-[1px] bg-clinical-white/20" />
-            <p className="text-clinical-white/40 text-[10px] tracking-[0.4em] uppercase">
-              Authenticated Patient Access Only
+          <div className="flex flex-col gap-3">
+            <div className="w-8 h-[1px] bg-clinical-white/20" />
+            <p className="text-[9px] tracking-[0.4em] uppercase text-clinical-white/30 font-bold">
+              Secure Ledger Access
             </p>
           </div>
         </div>
 
-        {/* --- RIGHT SIDE: THE SECURE FORM --- */}
-        <div className="bg-clinical-white p-8 sm:p-16 lg:p-20 flex flex-col justify-center relative z-20">
+        {/* --- RIGHT SIDE: THE COMPACT FORM --- */}
+        <div className="bg-clinical-white p-8 sm:p-12 lg:p-14 flex flex-col justify-center">
           <AnimatePresence mode="wait">
             <motion.div
               key={isLogin ? "login" : "signup"}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.4 }}
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              transition={{ duration: 0.3 }}
             >
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-1.5 h-1.5 bg-botanical-green rounded-full animate-pulse" />
-                <p className="text-[10px] uppercase tracking-[0.3em] text-botanical-green/40">
-                  Secure Portal
+                <div className="w-1 h-1 bg-botanical-green rounded-full animate-pulse" />
+                <p className="text-[9px] uppercase tracking-[0.3em] text-botanical-green/40 font-bold">
+                  Authentication Portal
                 </p>
               </div>
 
-              <h1 className="font-serif text-4xl text-botanical-green mb-10 tracking-tight">
+              <h1 className="font-serif text-3xl text-botanical-green mb-8 tracking-tight">
                 {isLogin ? "Open Ledger" : "Create Profile"}
               </h1>
 
-              <div className="space-y-8">
+              <form onSubmit={handleDemoAuth} className="space-y-6">
                 {!isLogin && (
-                  <div className="border-b border-botanical-green/10 flex items-center gap-4 py-3 focus-within:border-botanical-green transition-colors">
-                    <User size={18} className="text-botanical-green/20" />
-                    <input type="text" placeholder="Full Name" className="bg-transparent w-full outline-none text-botanical-green font-sans" />
+                  <div className="border-b border-botanical-green/10 flex items-center gap-4 py-2 focus-within:border-botanical-green transition-colors">
+                    <User size={16} className="text-botanical-green/30" />
+                    <input 
+                      required 
+                      type="text" 
+                      placeholder="Full Name" 
+                      className="bg-transparent w-full outline-none text-botanical-green text-sm font-sans placeholder:text-botanical-green/20" 
+                    />
                   </div>
                 )}
-                <div className="border-b border-botanical-green/10 flex items-center gap-4 py-3 focus-within:border-botanical-green transition-colors">
-                  <Mail size={18} className="text-botanical-green/20" />
-                  <input type="email" placeholder="Email Address" className="bg-transparent w-full outline-none text-botanical-green font-sans" />
+                <div className="border-b border-botanical-green/10 flex items-center gap-4 py-2 focus-within:border-botanical-green transition-colors">
+                  <Mail size={16} className="text-botanical-green/30" />
+                  <input 
+                    required 
+                    type="email" 
+                    placeholder="Email Address" 
+                    className="bg-transparent w-full outline-none text-botanical-green text-sm font-sans placeholder:text-botanical-green/20" 
+                  />
                 </div>
-                <div className="border-b border-botanical-green/10 flex items-center gap-4 py-3 focus-within:border-botanical-green transition-colors">
-                  <Lock size={18} className="text-botanical-green/20" />
-                  <input type="password" placeholder="Secure Password" className="bg-transparent w-full outline-none text-botanical-green font-sans" />
+                <div className="border-b border-botanical-green/10 flex items-center gap-4 py-2 focus-within:border-botanical-green transition-colors">
+                  <Lock size={16} className="text-botanical-green/30" />
+                  <input 
+                    required 
+                    type="password" 
+                    placeholder="Password" 
+                    className="bg-transparent w-full outline-none text-botanical-green text-sm font-sans placeholder:text-botanical-green/20" 
+                  />
                 </div>
-              </div>
 
-              <button className="w-full mt-12 bg-botanical-green text-clinical-white py-5 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-botanical-green/90 transition-all shadow-xl active:scale-[0.98]">
-                {isLogin ? "Unlock Archives" : "Initialize Identity"} <ArrowRight size={16} />
-              </button>
+                <button 
+                  disabled={isLoading}
+                  className="w-full mt-4 bg-botanical-green text-clinical-white py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-botanical-green/90 transition-all shadow-lg disabled:opacity-50 active:scale-[0.98]"
+                >
+                  {isLoading ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <>{isLogin ? "Unlock Archives" : "Initialize Identity"} <ArrowRight size={14} /></>
+                  )}
+                </button>
+              </form>
 
-              <div className="mt-10 flex flex-col items-center gap-4 text-center">
-                <p className="text-[11px] text-botanical-green/50 tracking-wide">
+              <div className="mt-8 flex flex-col items-center gap-4 text-center">
+                <p className="text-[10px] text-botanical-green/50 tracking-wide">
                   {isLogin ? "New to the apothecary?" : "Already hold a ledger?"}
                   <button 
+                    type="button"
                     onClick={() => setIsLogin(!isLogin)}
                     className="ml-2 text-botanical-green font-bold hover:underline underline-offset-4"
                   >
-                    {isLogin ? "Register Here" : "Sign In"}
+                    {isLogin ? "Register" : "Sign In"}
                   </button>
                 </p>
-                <Link href="/" className="text-[9px] uppercase tracking-[0.2em] text-botanical-green/30 hover:text-botanical-green transition-colors mt-2">
+                <Link 
+                  href="/" 
+                  className="text-[8px] uppercase tracking-[0.2em] text-botanical-green/30 hover:text-botanical-green transition-colors"
+                >
                   Return to Home
                 </Link>
               </div>
             </motion.div>
           </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
     </main>
   );
 }

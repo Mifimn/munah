@@ -23,6 +23,9 @@ export default function Sidebar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Hides the Sidebar completely on the Admin page
+  if (pathname.startsWith("/admin")) return null;
+
   const menuItems = [
     { name: "Home", href: "/" },
     { name: "Archive", href: "/shop" },

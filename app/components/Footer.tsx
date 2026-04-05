@@ -3,8 +3,14 @@
 import { motion } from "framer-motion";
 import { Leaf, ArrowUp, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  // Hides the Footer completely on the Admin page
+  if (pathname.startsWith("/admin")) return null;
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };

@@ -18,13 +18,13 @@ export default function MemberLedger() {
   const activeOrders = [{ id: "ORD-9921", status: "In Formulation", date: "April 03, 2026" }];
   const pastOrders = [{ id: "ORD-8840", status: "Delivered", date: "March 12, 2026", total: 45000 }];
 
-  // Tracking Steps
+  // Tracking Steps (SYNCED WITH ADMIN & FEZ LOGISTICS)
   const trackingSteps = [
     { title: "Order Received", desc: "Apothecary ledger updated", status: "complete" },
-    { title: "Botanical Sourcing", desc: "Selecting active ingredients", status: "complete" },
-    { title: "Clinical Extraction", desc: "In formulation at laboratory", status: "current" },
-    { title: "Secure Packaging", desc: "Sealing in violet glass", status: "pending" },
-    { title: "Dispatched", desc: "Handed to logistics partner", status: "pending" },
+    { title: "In Formulation", desc: "Laboratory extraction in progress", status: "current" },
+    { title: "Ready for Dispatch", desc: "Securely packaged in violet glass", status: "pending" },
+    { title: "In Transit via Fez", desc: "Handed to Fez Logistics partner", status: "pending" },
+    { title: "Delivered", desc: "Package safely arrived at destination", status: "pending" },
   ];
 
   const handleLogout = () => router.push("/account");
@@ -80,10 +80,11 @@ export default function MemberLedger() {
                 </div>
               </div>
 
+              {/* UPDATED FEZ DELIVERY FOOTER */}
               <div className="p-8 bg-botanical-green/5 border-t border-botanical-green/5">
-                <div className="flex items-center gap-4 text-botanical-green/60 italic text-xs">
+                <div className="flex items-center gap-4 text-botanical-green/60 italic text-xs font-bold">
                   <Truck size={16} />
-                  <span>Estimated Arrival: 2-3 Business Days</span>
+                  <span>Logistics Partner: Fez Delivery (Est. 2-3 Days)</span>
                 </div>
               </div>
             </motion.div>

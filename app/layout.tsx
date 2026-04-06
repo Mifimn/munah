@@ -27,7 +27,7 @@ export const metadata: Metadata = {
     default: "Natural Cure | Clinical Apothecary, Original Honey & Camel Milk",
     template: "%s | naturalcureherbalmedicine",
   },
-  description: "Nigeria's premier clinical apothecary specializing in hand-formulated remedies, 100% Original Wild Honey, and Undiluted Camel Milk. Curated by Modina Olagunju.",
+  description: "Nigeria's premier clinical apothecary specializing in hand-formulated remedies, 10p Wild Honey, and Undiluted Camel Milk. Curated by Modina Olagunju.",
   keywords: [
     "Original Honey Nigeria",
     "Undiluted Camel Milk Nigeria",

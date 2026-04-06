@@ -2,6 +2,7 @@ import HeroSection from "./components/home/HeroSection";
 import BrandStory from "./components/home/BrandStory";
 import CategoryGrid from "./components/home/CategoryGrid";
 import Testimonials from "./components/home/Testimonials";
+import EbookPromoModal from "./components/EbookPromoModal";
 
 export default function Home() {
   return (
@@ -17,6 +18,9 @@ export default function Home() {
 
       {/* 4. Full-Screen Video Testimonial */}
       <Testimonials />
+
+      {/* 5. Invisible 10-Second Lead Magnet Timer */}
+      <EbookPromoModal />
     </main>
   );
 }

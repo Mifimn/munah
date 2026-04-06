@@ -35,12 +35,44 @@ export default function MemberLedger() {
       return;
     }
 
-    // Get Profile
-    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+    // Get Profile (Fetching '*' so we can check the welcome_email_sent flag)
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    
     setUserProfile({
       full_name: profile?.full_name || "Valued Member",
       email: user.email || "",
     });
+
+    // --- NEW: THE EBOOK TRIGGER ---
+    // Using !== true catches BOTH false and null!
+    if (profile && profile.welcome_email_sent !== true) {
+      try {
+        console.log("Attempting to send eBook API...");
+        
+        // 1. Send the email via our new API
+        const response = await fetch('/api/send-ebook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: user.email, name: profile.full_name }),
+        });
+
+        // 2. Only update the database IF the email successfully sent
+        if (response.ok) {
+          console.log("Email sent successfully! Updating database...");
+          await supabase
+            .from('profiles')
+            .update({ welcome_email_sent: true })
+            .eq('id', user.id);
+        } else {
+          // If Resend failed, print the error to the browser console
+          const errorData = await response.json();
+          console.error("API refused to send:", errorData);
+        }
+      } catch (err) {
+        console.error("Network failed to reach API:", err);
+      }
+    }
+    // --------------------------------
 
     // --- FIXED TYPE CHECK ERROR HERE FOR VERCEL ---
     const { data: cartData } = await supabase

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ShieldCheck, Lock, Mail, ArrowRight, Leaf, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase"; // Live DB connection
+import { supabase } from "@/lib/supabase"; 
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -18,35 +18,56 @@ export default function AdminLogin() {
     setIsLoading(true);
     setError("");
 
-    // 1. Authenticate with Supabase
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      // Forcefully clear any stuck or broken background sessions
+      await supabase.auth.signOut();
 
-    if (authError) {
-      setError(authError.message);
-      setIsLoading(false);
-      return;
-    }
+      // 1. Authenticate with Supabase
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    // 2. Verify Admin Clearance in the profiles table
-    if (authData.user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin')
-        .eq('id', authData.user.id)
-        .single();
+      // Show exact auth error on screen (e.g. "Invalid login credentials")
+      if (authError) {
+        setError(`Auth Error: ${authError.message}`);
+        setIsLoading(false);
+        return;
+      }
 
-      if (profile?.is_admin) {
-        // Success! Redirect to the Command Center
-        router.push("/admin");
+      // 2. Verify Admin Clearance in the profiles table
+      if (authData?.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', authData.user.id)
+          .single();
+
+        // Show exact database error if RLS blocks the read
+        if (profileError) {
+          setError(`Database Blocked: ${profileError.message}`);
+          await supabase.auth.signOut();
+          setIsLoading(false);
+          return;
+        }
+
+        // 3. Final Check & Redirect
+        if (profile?.is_admin === true) {
+          // SUCCESS! Route to the admin page
+          router.push("/admin"); 
+        } else {
+          // Tell us exactly what it found in the database instead of 'true'
+          setError(`Access Denied. Database says is_admin = ${String(profile?.is_admin)}`);
+          await supabase.auth.signOut();
+          setIsLoading(false);
+        }
       } else {
-        // Not an admin: Sign them out and show error
-        await supabase.auth.signOut();
-        setError("Clinical clearance required. Access Denied.");
+        setError("Secure authentication failed.");
         setIsLoading(false);
       }
+    } catch (err: any) {
+      setError(`System Crash: ${err.message}`);
+      setIsLoading(false);
     }
   };
 
@@ -78,9 +99,11 @@ export default function AdminLogin() {
         {/* Login Form */}
         <form onSubmit={handleLogin} className="bg-clinical-white p-8 md:p-10 shadow-2xl rounded-sm">
           
+          {/* ERROR DISPLAY BOX */}
           {error && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-red-50 text-red-800 text-xs p-4 mb-6 rounded-sm font-bold tracking-widest uppercase border border-red-100 flex items-center gap-2">
-              <Lock size={14} /> {error}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-red-50 text-red-800 text-xs p-4 mb-6 rounded-sm font-bold tracking-widest uppercase border border-red-100 flex items-start gap-2 leading-relaxed">
+              <Lock size={14} className="mt-0.5 shrink-0" /> 
+              <span>{error}</span>
             </motion.div>
           )}
 
@@ -94,7 +117,7 @@ export default function AdminLogin() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="modina@naturalcure.com" 
+                placeholder="admin@naturalcure.com" 
                 className="w-full border-b border-botanical-green/20 py-3 outline-none focus:border-botanical-green bg-transparent text-sm text-botanical-green font-mono" 
               />
             </div>

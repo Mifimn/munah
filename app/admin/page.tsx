@@ -22,19 +22,38 @@ export default function AdminCommandCenter() {
   const [adminEmail, setAdminEmail] = useState("Loading...");
   const [adminInitial, setAdminInitial] = useState("M");
 
-  // --- REAL-TIME DATABASE FETCH ---
+  // --- REAL-TIME DATABASE FETCH & SECURITY LOCK ---
   useEffect(() => {
-    fetchInventory();
-    fetchAdminProfile();
-  }, []);
+    async function checkAuthAndFetchData() {
+      // 1. Security Lock: Verify User
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        router.push("/admin/login");
+        return;
+      }
 
-  async function fetchAdminProfile() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user && user.email) {
-      setAdminEmail(user.email);
-      setAdminInitial(user.email.charAt(0).toUpperCase());
+      // 2. Security Lock: Verify Admin Status
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile?.is_admin) {
+        router.push("/admin/login");
+        return;
+      }
+
+      // 3. User is verified Admin. Load their data!
+      setAdminEmail(user.email || "");
+      setAdminInitial(user.email ? user.email.charAt(0).toUpperCase() : "A");
+      
+      await fetchInventory();
     }
-  }
+
+    checkAuthAndFetchData();
+  }, []);
 
   async function fetchInventory() {
     setIsLoading(true);
@@ -52,7 +71,7 @@ export default function AdminCommandCenter() {
   // --- LOGOUT HANDLER ---
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/"); // Or back to admin login
+    router.push("/admin/login"); 
   };
 
   // --- QUICK STATS CALCULATIONS ---

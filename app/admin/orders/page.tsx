@@ -48,7 +48,8 @@ export default function OrderManagement() {
 
     if (!error) {
       setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-      setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
+      // FIXED: Added (prev: any) to satisfy TypeScript compiler
+      setSelectedOrder((prev: any) => prev ? { ...prev, status: newStatus } : null);
     }
     setIsUpdating(false);
   };

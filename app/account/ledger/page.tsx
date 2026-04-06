@@ -42,17 +42,25 @@ export default function MemberLedger() {
       email: user.email || "",
     });
 
-    // Get Cart Items (Joined with products table for name and price)
+    // --- FIXED TYPE CHECK ERROR HERE FOR VERCEL ---
     const { data: cartData } = await supabase
       .from('cart_items')
-      .select('id, quantity, product_id, products(name, price)')
+      .select(`
+        id, 
+        quantity, 
+        product_id, 
+        products (
+          name, 
+          price
+        )
+      `)
       .eq('user_id', user.id);
       
     if (cartData) {
-      const formattedCart = cartData.map(item => ({
+      const formattedCart = cartData.map((item: any) => ({
         id: item.id,
-        name: item.products.name,
-        price: item.products.price,
+        name: item.products?.name || "Unknown Product",
+        price: item.products?.price || 0,
         qty: item.quantity
       }));
       setCartItems(formattedCart);
@@ -92,7 +100,7 @@ export default function MemberLedger() {
   // --- DYNAMIC CALCULATIONS ---
   const cartSubtotal = cartItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
-  // Dynamic tracking steps logic based on current status
+  // Dynamic tracking steps logic
   const statuses = ["Order Received", "In Formulation", "Ready for Dispatch", "Dispatched", "Delivered"];
   const currentStatusIndex = selectedOrder ? statuses.indexOf(selectedOrder.status) : 0;
 
@@ -111,13 +119,11 @@ export default function MemberLedger() {
       <AnimatePresence>
         {showDrawer && selectedOrder && (
           <>
-            {/* Backdrop */}
             <motion.div 
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowDrawer(false)}
               className="fixed inset-0 bg-botanical-green/40 backdrop-blur-sm z-[100]"
             />
-            {/* Drawer */}
             <motion.div 
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
@@ -137,13 +143,11 @@ export default function MemberLedger() {
                 <div className="relative space-y-12 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-botanical-green/10">
                   {trackingSteps.map((step, i) => (
                     <div key={i} className="flex gap-6 relative">
-                      {/* Status Icon */}
                       <div className={`w-[24px] h-[24px] rounded-full flex items-center justify-center shrink-0 z-10 transition-colors duration-500
                         ${step.status === 'complete' ? 'bg-botanical-green text-white' : 
                           step.status === 'current' ? 'bg-white border-2 border-botanical-green animate-pulse' : 'bg-earth-silk border border-botanical-green/10'}`}>
                         {step.status === 'complete' && <CheckCircle2 size={14} />}
                       </div>
-                      {/* Text Content */}
                       <div>
                         <p className={`text-xs font-bold uppercase tracking-widest ${step.status === 'pending' ? 'text-botanical-green/20' : 'text-botanical-green'}`}>
                           {step.title}
@@ -155,7 +159,6 @@ export default function MemberLedger() {
                 </div>
               </div>
 
-              {/* UPDATED FEZ DELIVERY FOOTER */}
               <div className="p-8 bg-botanical-green/5 border-t border-botanical-green/5">
                 <div className="flex items-center gap-4 text-botanical-green/60 italic text-xs font-bold">
                   <Truck size={16} />
@@ -168,7 +171,6 @@ export default function MemberLedger() {
       </AnimatePresence>
 
       <div className="max-w-[1200px] mx-auto">
-        {/* --- 1. MEMBER IDENTITY HEADER --- */}
         <header className="mb-8 md:mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8 border-b border-botanical-green/10 pb-10">
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -188,7 +190,6 @@ export default function MemberLedger() {
           </div>
         </header>
 
-        {/* --- 2. DYNAMIC CONTENT --- */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-16">
           <div className="lg:col-span-8">
             <AnimatePresence mode="wait">
@@ -236,7 +237,6 @@ export default function MemberLedger() {
                       </div>
                     ))}
                   </div>
-                  {/* Past Orders */}
                   <div>
                     <h2 className="text-[10px] uppercase tracking-[0.3em] text-botanical-green/40 mb-6 font-bold">Botanical History</h2>
                     {pastOrders.length === 0 && <p className="text-xs text-botanical-green/40 italic">No past orders found.</p>}
@@ -252,7 +252,6 @@ export default function MemberLedger() {
             </AnimatePresence>
           </div>
 
-          {/* --- 3. SUMMARY SIDEBAR --- */}
           <div className="lg:col-span-4">
             <div className="bg-botanical-green p-8 md:p-10 text-clinical-white rounded-sm shadow-2xl relative overflow-hidden lg:sticky lg:top-32">
               <Leaf className="absolute -bottom-10 -right-10 text-clinical-white/5 w-40 h-40" />

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Leaf, ArrowRight, Lock, Mail, User, Loader2, AlertCircle } from "lucide-react";
+import { Leaf, ArrowRight, Lock, Mail, User, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase"; // Live DB connection
@@ -11,6 +11,7 @@ export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState(""); // <-- NEW: Success state added
   const router = useRouter();
 
   // --- FORM STATE ---
@@ -23,6 +24,7 @@ export default function AuthPage() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+    setSuccessMsg("");
     
     try {
       if (isLogin) {
@@ -36,7 +38,7 @@ export default function AuthPage() {
         // Success! Redirect to ledger
         router.push("/account/ledger");
       } else {
-        // 2. SIGNUP LOGIC (Testing Mode: No Email Confirmation)
+        // 2. SIGNUP LOGIC (Production Mode: WITH Email Confirmation)
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -46,9 +48,10 @@ export default function AuthPage() {
         });
         if (signUpError) throw signUpError;
         
-        // Success! Because email confirmation is OFF in Supabase, 
-        // the user is instantly logged in. Redirect to ledger.
-        router.push("/account/ledger"); 
+        // Success! Tell them to check their email and switch back to the login form
+        setSuccessMsg("Welcome to Natural Cure Herbal Medicine! Please check your email to verify your account.");
+        setIsLogin(true); 
+        setPassword(""); // Clear the password for security
       }
     } catch (err: any) {
       setError(err.message);
@@ -131,7 +134,16 @@ export default function AuthPage() {
               {/* Dynamic Error Message */}
               {error && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-red-50 text-red-800 text-xs p-3 mb-6 rounded-sm font-bold tracking-widest uppercase border border-red-100 flex items-center gap-2">
-                  <AlertCircle size={14} /> {error}
+                  <AlertCircle size={14} className="shrink-0" /> 
+                  <span>{error}</span>
+                </motion.div>
+              )}
+
+              {/* Dynamic Success Message */}
+              {successMsg && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-green-50 text-green-800 text-xs p-4 mb-6 rounded-sm font-bold tracking-wide border border-green-200 flex items-start gap-3 leading-relaxed">
+                  <CheckCircle2 size={16} className="shrink-0 mt-0.5" /> 
+                  <span>{successMsg}</span>
                 </motion.div>
               )}
 
@@ -192,6 +204,7 @@ export default function AuthPage() {
                     onClick={() => {
                       setIsLogin(!isLogin);
                       setError(""); // Clear errors when switching tabs
+                      setSuccessMsg(""); // Clear success message when switching tabs
                     }}
                     className="ml-2 text-botanical-green font-bold hover:underline underline-offset-4"
                   >

@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Leaf, ArrowUp, ArrowUpRight } from "lucide-react";
+import { ArrowUp, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 export default function Footer() {
@@ -24,7 +25,14 @@ export default function Footer() {
           {/* Column 1: Brand Authority */}
           <div className="space-y-6">
             <div className="flex items-center gap-3">
-              <Leaf size={18} className="opacity-60" />
+              {/* REPLACED LEAF ICON WITH IMAGE LOGO */}
+              <Image 
+                src="/logo.png" 
+                alt="Natural Cure Logo" 
+                width={18} 
+                height={18} 
+                className="object-contain brightness-0 invert opacity-60" 
+              />
               <span className="font-serif text-lg tracking-widest lowercase">
                 naturalcureherbalmedicine
               </span>

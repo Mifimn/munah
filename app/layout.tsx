@@ -51,6 +51,11 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
+  // SETS FAVICON USING YOUR LOGO
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 
   // Open Graph (Social Media Sharing)
   openGraph: {

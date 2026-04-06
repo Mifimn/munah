@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Leaf, ArrowRight, LogOut, User } from "lucide-react";
+import { Menu, X, ArrowRight, LogOut, User } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -85,8 +86,15 @@ export default function Sidebar() {
             animate={{ opacity: showBrand ? 1 : 0, scale: showBrand ? 1 : 0.8 }}
             className="pointer-events-auto"
           >
-            <Link href="/" className="group flex items-center justify-center bg-botanical-green/10 backdrop-blur-md p-3 rounded-full border border-botanical-green/20 hover:bg-botanical-green transition-all duration-500">
-              <Leaf size={20} className="text-botanical-green group-hover:text-clinical-white transition-colors" />
+            <Link href="/" className="group flex items-center justify-center bg-botanical-green/10 backdrop-blur-md p-2 rounded-full border border-botanical-green/20 hover:bg-botanical-green transition-all duration-500">
+               {/* REPLACED LEAF ICON WITH IMAGE LOGO */}
+               <Image 
+                src="/logo.png" 
+                alt="Natural Cure Logo" 
+                width={28} 
+                height={28} 
+                className="object-contain"
+              />
             </Link>
           </motion.div>
 
@@ -138,7 +146,14 @@ export default function Sidebar() {
             {/* Sidebar Top Header */}
             <div className="flex justify-between items-center px-8 py-10 border-b border-clinical-white/10">
               <div className="flex items-center gap-2 opacity-40">
-                <Leaf size={14} className="text-clinical-white" />
+                {/* REPLACED LEAF ICON WITH IMAGE LOGO */}
+                <Image 
+                  src="/logo.png" 
+                  alt="Natural Cure Logo" 
+                  width={16} 
+                  height={16} 
+                  className="object-contain brightness-0 invert" 
+                />
                 <span className="text-[10px] uppercase tracking-widest text-clinical-white font-bold">Apothecary Index</span>
               </div>
               <button onClick={() => setIsOpen(false)} className="p-4 bg-clinical-white/10 rounded-full text-clinical-white">

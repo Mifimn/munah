@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, Leaf } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function HeroSection() {
   return (
@@ -17,7 +18,14 @@ export default function HeroSection() {
       >
         <Link href="/" className="flex items-center gap-3 group cursor-pointer">
           <div className="bg-clinical-white/10 backdrop-blur-md p-2 rounded-full border border-clinical-white/20 group-hover:bg-clinical-white/20 transition-all duration-500">
-            <Leaf size={18} className="text-clinical-white" />
+            {/* REPLACED LEAF ICON WITH IMAGE LOGO */}
+            <Image 
+              src="/logo.png" 
+              alt="Natural Cure Logo" 
+              width={24} 
+              height={24} 
+              className="object-contain brightness-0 invert" 
+            />
           </div>
           <span className="font-serif text-base sm:text-lg tracking-widest text-clinical-white lowercase opacity-80 group-hover:opacity-100 transition-opacity">
             naturalcureherbalmedicine

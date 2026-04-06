@@ -1,25 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Plus } from "lucide-react";
 import Link from "next/link";
-
-// Mock Database for the Archive
-const products = [
-  { id: 1, name: "Immunity Elixir", category: "Immunity", price: "$45.00", image: "/prod-1.jpg" },
-  { id: 2, name: "Men's Vitality Root", category: "Men's Health", price: "$65.00", image: "/prod-2.jpg" },
-  { id: 3, name: "Cellular Detox", category: "Infections", price: "$55.00", image: "/prod-3.jpg" },
-  { id: 4, name: "Metabolic Reset", category: "Weight Management", price: "$80.00", image: "/prod-4.jpg" },
-  { id: 5, name: "Deep Sleep Botanicals", category: "Sleep", price: "$40.00", image: "/prod-5.jpg" },
-  { id: 6, name: "Digestive Bitters", category: "Digestion", price: "$35.00", image: "/prod-6.jpg" },
-];
-
-const ailments = ["All", "Men's Health", "Infections", "Weight Management", "Immunity", "Sleep", "Digestion"];
+import { supabase } from "@/lib/supabase"; // Live DB connection
 
 export default function ShopArchive() {
+  const [products, setProducts] = useState<any[]>([]);
+  const [ailments, setAilments] = useState<string[]>(["All"]);
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchArchiveData();
+  }, []);
+
+  async function fetchArchiveData() {
+    setIsLoading(true);
+    
+    // 1. Fetch Categories for the Ailment Index
+    const { data: categoryData } = await supabase.from('categories').select('name');
+    if (categoryData) {
+      setAilments(["All", ...categoryData.map(c => c.name)]);
+    }
+
+    // 2. Fetch Active Products
+    const { data: productData } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+      
+    if (productData) {
+      const formattedProducts = productData.map(p => ({
+        id: p.id,
+        name: p.name,
+        category: p.category_name || "Uncategorized",
+        price: `₦${p.price.toLocaleString()}`,
+        image: p.image_url || "" // Falls back to empty if no image exists yet
+      }));
+      setProducts(formattedProducts);
+    }
+    
+    setIsLoading(false);
+  }
 
   // Smart Filtering Logic
   const filteredProducts = products.filter((product) => {
@@ -135,56 +160,64 @@ export default function ShopArchive() {
 
           {/* Right Column: The Product Grid */}
           <div className="lg:col-span-9">
-            <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-16">
-              <AnimatePresence>
-                {filteredProducts.map((product) => (
-                  <motion.div
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.4 }}
-                    key={product.id}
-                    className="group relative"
-                  >
-                    <Link href={`/shop/${product.id}`} className="block">
-                      {/* FIXED: Changed aspect-[3/4] to aspect-square to make the cards significantly shorter */}
-                      <div className="relative aspect-square bg-botanical-green/5 overflow-hidden mb-6 flex items-center justify-center">
-                        <div 
-                          className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-in-out group-hover:scale-105 opacity-80 mix-blend-multiply"
-                          style={{ backgroundImage: `url(${product.image})` }}
-                        />
+            {isLoading ? (
+              <div className="w-full py-24 flex justify-center">
+                <p className="font-serif text-2xl text-botanical-green/50 animate-pulse">Loading Archive...</p>
+              </div>
+            ) : (
+              <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-16">
+                <AnimatePresence>
+                  {filteredProducts.map((product) => (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.4 }}
+                      key={product.id}
+                      className="group relative"
+                    >
+                      <Link href={`/shop/${product.id}`} className="block">
+                        {/* FIXED: Changed aspect-[3/4] to aspect-square to make the cards significantly shorter */}
+                        <div className="relative aspect-square bg-botanical-green/5 overflow-hidden mb-6 flex items-center justify-center">
+                          {product.image && (
+                            <div 
+                              className="absolute inset-0 bg-cover bg-center transition-transform duration-700 ease-in-out group-hover:scale-105 opacity-80 mix-blend-multiply"
+                              style={{ backgroundImage: `url(${product.image})` }}
+                            />
+                          )}
 
-                        {/* Quick Add Overlay */}
-                        <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-10">
-                          <button className="w-full bg-botanical-green text-clinical-white py-4 text-sm font-semibold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#2C5535] transition-colors shadow-lg">
-                            <Plus size={16} /> Quick Add
-                          </button>
+                          {/* Quick Add Overlay */}
+                          <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-10">
+                            <button className="w-full bg-botanical-green text-clinical-white py-4 text-sm font-semibold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#2C5535] transition-colors shadow-lg">
+                              <Plus size={16} /> Quick Add
+                            </button>
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Product Typography */}
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="text-xs uppercase tracking-widest text-botanical-green/50 mb-2">
-                            {product.category}
+                        {/* Product Typography */}
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-xs uppercase tracking-widest text-botanical-green/50 mb-2">
+                              {product.category}
+                            </p>
+                            <h2 className="font-serif text-2xl text-botanical-green">
+                              {product.name}
+                            </h2>
+                          </div>
+                          <p className="font-sans text-lg text-botanical-green">
+                            {product.price}
                           </p>
-                          <h2 className="font-serif text-2xl text-botanical-green">
-                            {product.name}
-                          </h2>
                         </div>
-                        <p className="font-sans text-lg text-botanical-green">
-                          {product.price}
-                        </p>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </motion.div>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            )}
 
             {/* Empty State */}
-            {filteredProducts.length === 0 && (
+            {!isLoading && filteredProducts.length === 0 && (
               <div className="w-full py-24 text-center">
                 <p className="font-serif text-2xl text-botanical-green/50">
                   No remedies found for this query.

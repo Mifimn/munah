@@ -19,16 +19,20 @@ const playfair = Playfair_Display({
   display: 'swap',
 });
 
-// --- ADVANCED CLINICAL SEO & OG CONFIGURATION ---
+// --- ADVANCED HYBRID SEO: APOTHECARY BRAND + CORE PRODUCTS ---
 export const metadata: Metadata = {
   metadataBase: new URL("https://naturalcureherbalmedicine.com"),
   title: {
-    // We keep your title exact, but Google uses the Site Name for the top label
-    default: "naturalcureherbalmedicine | Clinical Botanical Apothecary",
+    // Branding as a Clinical Apothecary while highlighting the Honey & Milk for Search
+    default: "Natural Cure | Clinical Apothecary, Original Honey & Camel Milk",
     template: "%s | naturalcureherbalmedicine",
   },
-  description: "Bridging ancestral botanical wisdom with modern clinical protocols. Hand-formulated remedies curated by Modina Olagunju for targeted cellular healing.",
+  description: "Nigeria's premier clinical apothecary specializing in hand-formulated remedies, 100% Original Wild Honey, and Undiluted Camel Milk. Curated by Modina Olagunju.",
   keywords: [
+    "Original Honey Nigeria",
+    "Undiluted Camel Milk Nigeria",
+    "Raw Camel Milk",
+    "Pure Wild Honey",
     "Modina Olagunju",
     "herbal medicine Nigeria",
     "botanical remedies",
@@ -50,17 +54,16 @@ export const metadata: Metadata = {
 
   // Open Graph (Social Media Sharing)
   openGraph: {
-    title: "naturalcureherbalmedicine | Digital Botanical Ledger",
-    description: "Explore clinical archives of hand-formulated botanical remedies. Curated by Modina Olagunju.",
+    title: "naturalcureherbalmedicine | Clinical Apothecary & Superfoods",
+    description: "Sourced from the wild, delivered with clinical purity. Explore our original honey, camel milk, and hand-formulated botanical archives.",
     url: "https://naturalcureherbalmedicine.com",
-    // CRITICAL FIX: Use spaces here so Google sees a Brand Name, not a URL
     siteName: "Natural Cure Herbal Medicine", 
     images: [
       {
         url: "/og-image.jpg", 
         width: 1200,
         height: 630,
-        alt: "naturalcureherbalmedicine Botanical Archive by Modina Olagunju",
+        alt: "Natural Cure Original Honey and Camel Milk by Modina Olagunju",
       },
     ],
     locale: "en_US",
@@ -69,8 +72,8 @@ export const metadata: Metadata = {
 
   twitter: {
     card: "summary_large_image",
-    title: "naturalcureherbalmedicine | Clinical Apothecary",
-    description: "Botanical science and ancestral healing by Modina Olagunju.",
+    title: "Natural Cure | Original Honey & Camel Milk",
+    description: "Botanical science, Original Honey, and Undiluted Camel Milk by Modina Olagunju.",
     images: ["/og-image.jpg"],
     creator: "@naturalcureherbalmedicine",
   },
@@ -94,13 +97,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   
-  // --- THE "ZOHO" SECRET: JSON-LD STRUCTURED DATA ---
-  // This explicitly tells Google the exact Site Name to display above the URL
+  // --- UPDATED JSON-LD: INCLUDES PRODUCT SPECIALTIES ---
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "Natural Cure Herbal Medicine",
-    "alternateName": ["naturalcureherbalmedicine", "Natural Cure Apothecary"],
+    "alternateName": [
+      "naturalcureherbalmedicine", 
+      "Natural Cure Apothecary", 
+      "Original Honey & Camel Milk Nigeria"
+    ],
     "url": "https://naturalcureherbalmedicine.com/"
   };
 

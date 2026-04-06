@@ -40,7 +40,7 @@ export default function HeroSection() {
       <div className="absolute inset-0 bg-botanical-green/40 z-10" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-botanical-green/10 to-[var(--color-earth-silk)] z-10" />
 
-      {/* Hero Content */}
+      {/* Hero Content - Updated for Honey & Camel Milk Focus */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -53,16 +53,16 @@ export default function HeroSection() {
           transition={{ delay: 0.5, duration: 1 }}
           className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.4em] text-clinical-white/70 mb-6"
         >
-          Absolute Potency • Clinical Purity
+          Raw Superfoods • Original Purity • Clinical Grade
         </motion.p>
 
         <h1 className="font-serif text-6xl sm:text-7xl lg:text-8xl mb-8 tracking-tight text-clinical-white leading-[1.1]">
           Nature's <br className="sm:hidden" />
-          <span className="italic font-light opacity-90 text-clinical-white/80">Apothecary</span>
+          <span className="italic font-light opacity-90 text-clinical-white/80">Liquid Gold</span>
         </h1>
 
         <p className="font-sans text-lg sm:text-xl lg:text-2xl text-clinical-white/80 mb-12 max-w-2xl mx-auto leading-relaxed font-light">
-          Clinically-backed botanical remedies designed to target the root cause. Discover absolute healing.
+          Nigeria’s premier source for <span className="text-clinical-white font-bold">Original Honey</span> and <span className="text-clinical-white font-bold">Undiluted Camel Milk</span>. Explore our clinical apothecary archive.
         </p>
 
         <Link href="/shop" passHref>
@@ -71,7 +71,7 @@ export default function HeroSection() {
             whileTap={{ scale: 0.98 }}
             className="group relative inline-flex items-center justify-center gap-4 px-10 py-5 bg-clinical-white text-botanical-green rounded-full text-xs sm:text-sm font-bold uppercase tracking-widest overflow-hidden transition-all duration-500 shadow-2xl"
           >
-            <span className="relative z-10">Explore the Archive</span>
+            <span className="relative z-10">Secure Your Supply</span>
             <ArrowRight size={18} className="relative z-10 transition-transform duration-500 group-hover:translate-x-1" />
           </motion.button>
         </Link>

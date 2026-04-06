@@ -5,16 +5,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Leaf, ArrowRight, LogOut, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [showBrand, setShowBrand] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Demo state
-  const [cartCount, setCartCount] = useState(1); // Demo count
-  
+  const [cartCount, setCartCount] = useState(0); 
+
+  const { user } = useAuth(); // Real authentication state
   const pathname = usePathname();
   const router = useRouter();
 
+  // Scroll Listener for Logo
   useEffect(() => {
     const handleScroll = () => {
       setShowBrand(window.scrollY > 500);
@@ -22,6 +25,37 @@ export default function Sidebar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Fetch real cart count from database
+  useEffect(() => {
+    if (!user) {
+      setCartCount(0);
+      return;
+    }
+
+    const fetchCartCount = async () => {
+      const { count } = await supabase
+        .from('cart_items')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      setCartCount(count || 0);
+    };
+
+    fetchCartCount();
+
+    // Optional: Real-time subscription to update cart count instantly when items are added
+    const channel = supabase
+      .channel('custom-all-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cart_items', filter: `user_id=eq.${user.id}` }, () => {
+        fetchCartCount();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // Hides the Sidebar completely on the Admin page
   if (pathname.startsWith("/admin")) return null;
@@ -32,6 +66,12 @@ export default function Sidebar() {
     { name: "Library", href: "/library" },
     { name: "Account", href: "/account/ledger" },
   ];
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsOpen(false);
+    router.push("/account");
+  };
 
   return (
     <>
@@ -146,12 +186,12 @@ export default function Sidebar() {
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
                 className="mt-12"
               >
-                {isLoggedIn ? (
+                {user ? (
                   <button 
-                    onClick={() => { setIsLoggedIn(false); setIsOpen(false); router.push("/account"); }}
+                    onClick={handleLogout}
                     className="flex items-center gap-4 text-clinical-white/40 hover:text-red-400 transition-colors uppercase text-[10px] tracking-[0.4em] font-bold"
                   >
-                    <LogOut size={16} /> Logout Session
+                    <LogOut size={16} /> Logout
                   </button>
                 ) : (
                   <Link 
@@ -159,7 +199,7 @@ export default function Sidebar() {
                     onClick={() => setIsOpen(false)}
                     className="flex items-center gap-4 text-clinical-white uppercase text-[10px] tracking-[0.4em] font-bold border border-clinical-white/20 w-fit px-6 py-3 rounded-full hover:bg-clinical-white hover:text-botanical-green transition-all"
                   >
-                    <User size={16} /> Patient Login
+                    <User size={16} /> Login
                   </Link>
                 )}
               </motion.div>

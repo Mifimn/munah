@@ -43,7 +43,9 @@ export default function AuthPage() {
           email,
           password,
           options: {
-            data: { full_name: fullName } // Passes name to your SQL trigger
+            data: { full_name: fullName }, // Passes name to your SQL trigger
+            // --- NEW: Tells the email button exactly where to redirect after clicking! ---
+            emailRedirectTo: `${window.location.origin}/account/ledger`,
           }
         });
         if (signUpError) throw signUpError;

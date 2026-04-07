@@ -7,13 +7,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase"; // Live DB connection
 
-// Hardcoded sizes for the UI (Since DB schema only holds base price and singular volume)
-const availableSizes = [
-  { label: "500ml", multiplier: 1 },
-  { label: "1 Litre", multiplier: 1.8 },
-  { label: "5 Litres", multiplier: 8.5 },
-];
-
 export default function ProductDetails({ params }: { params: Promise<{ slug: string }> }) {
   // UNWRAP PARAMS HERE FOR NEXT.JS 15+
   const { slug } = use(params);
@@ -26,7 +19,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
 
   // Interactive States
   const [quantity, setQuantity] = useState(1);
-  const [selectedSize, setSelectedSize] = useState(availableSizes[0]);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null); // NEW: Dynamic variant state
   const [activeSection, setActiveSection] = useState<string | null>("ingredients");
 
   // Fetch Data on Load
@@ -44,13 +37,21 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
       if (currentProduct) {
         setProduct(currentProduct);
 
-        // 2. Fetch related products from the same category
+        // 2. Set the initial variant/size to the first one in the JSON array
+        if (currentProduct.variants && currentProduct.variants.length > 0) {
+          setSelectedVariant(currentProduct.variants[0]);
+        } else {
+          // Fallback for older products before variants were added
+          setSelectedVariant({ size: currentProduct.volume || 'Standard Size', price: currentProduct.price });
+        }
+
+        // 3. Fetch related products from the same category (MAX 4)
         const { data: related } = await supabase
           .from('products')
           .select('*')
           .eq('category_name', currentProduct.category_name)
           .neq('id', currentProduct.id)
-          .limit(3);
+          .limit(4); // Changed from 3 to 4
           
         if (related) setRelatedProducts(related);
       }
@@ -73,6 +74,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
     }
 
     // Insert into their personal ledger
+    // Note: If you want to save the EXACT size they picked, you may need to add a 'variant_size' column to your cart_items table in the future!
     const { error } = await supabase.from('cart_items').insert({
       user_id: user.id,
       product_id: product.id,
@@ -108,9 +110,14 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
     );
   }
 
-  // Calculate final price based on size multiplier and quantity
-  const currentUnitPrice = product.price * selectedSize.multiplier;
+  // Calculate final price based on dynamically selected variant
+  const currentUnitPrice = selectedVariant ? parseFloat(selectedVariant.price) : product.price;
   const totalPrice = currentUnitPrice * quantity;
+
+  // Determine what list to map for the size buttons
+  const availableVariants = product.variants && product.variants.length > 0 
+    ? product.variants 
+    : [selectedVariant];
 
   return (
     <main className="min-h-screen bg-earth-silk pb-32">
@@ -176,23 +183,23 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
               {product.description || "Clinically formulated botanical extract designed for peak vitality."}
             </p>
 
-            {/* --- SIZE/LITER SELECTION --- */}
+            {/* --- DYNAMIC SIZE/VARIANT SELECTION --- */}
             <div className="mb-10">
               <label className="text-[10px] uppercase tracking-widest text-botanical-green/60 font-bold flex items-center gap-2 mb-4">
-                <Droplet size={14} /> Select Volume
+                <Droplet size={14} /> Select Volume / Size
               </label>
               <div className="flex flex-wrap gap-3">
-                {availableSizes.map((size) => (
+                {availableVariants.map((variant: any, idx: number) => (
                   <button
-                    key={size.label}
-                    onClick={() => setSelectedSize(size)}
+                    key={idx}
+                    onClick={() => setSelectedVariant(variant)}
                     className={`px-6 py-3 rounded-full text-xs font-bold uppercase tracking-widest transition-all border ${
-                      selectedSize.label === size.label 
+                      selectedVariant?.size === variant.size 
                       ? "bg-botanical-green text-clinical-white border-botanical-green shadow-md" 
                       : "bg-transparent text-botanical-green border-botanical-green/20 hover:border-botanical-green"
                     }`}
                   >
-                    {size.label}
+                    {variant.size}
                   </button>
                 ))}
               </div>
@@ -299,7 +306,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
         </div>
       </div>
 
-      {/* 3. RELATED PRODUCTS SECTION */}
+      {/* 3. RELATED PRODUCTS SECTION (Upgraded to 4 items) */}
       {relatedProducts.length > 0 && (
         <section className="w-full pt-32 px-6 sm:px-12 max-w-[1600px] mx-auto border-t border-botanical-green/10 mt-12">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12 gap-6">
@@ -311,7 +318,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
             {relatedProducts.map((prod) => (
               <Link href={`/shop/${prod.id}`} key={prod.id} className="group relative block">
                 <div className="relative aspect-square bg-botanical-green/5 overflow-hidden mb-6 flex items-center justify-center border border-botanical-green/5">
@@ -334,7 +341,9 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
                     </p>
                     <h3 className="font-serif text-2xl text-botanical-green">{prod.name}</h3>
                   </div>
-                  <p className="font-sans text-lg text-botanical-green">₦{prod.price.toLocaleString()}</p>
+                  <p className="font-sans text-lg text-botanical-green">
+                    ₦{(prod.variants?.[0]?.price || prod.price || 0).toLocaleString()}
+                  </p>
                 </div>
               </Link>
             ))}

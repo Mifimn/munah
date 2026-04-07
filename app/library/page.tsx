@@ -1,35 +1,44 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Leaf } from "lucide-react";
+import { ArrowRight, Leaf, Loader2 } from "lucide-react";
 import Link from "next/link";
-
-// Mock Database for Articles
-const articles = [
-  {
-    id: 1,
-    title: "The Science of Adaptogens",
-    excerpt: "Understanding how Rhodiola and Ashwagandha modulate the endocrine system to manage chronic cortisol levels.",
-    category: "Stress & Energy",
-    readTime: "6 min read"
-  },
-  {
-    id: 2,
-    title: "Ancestral Immunity Rituals",
-    excerpt: "Bridging the gap between cold-press extraction and cellular defense during peak infection seasons.",
-    category: "Immunity",
-    readTime: "8 min read"
-  },
-  {
-    id: 3,
-    title: "Gut-Brain Axis: A Botanical Map",
-    excerpt: "How digestive bitters communicate with the nervous system to improve mental clarity and metabolic health.",
-    category: "Digestion",
-    readTime: "5 min read"
-  }
-];
+import { supabase } from "@/lib/supabase";
 
 export default function WellnessLibrary() {
+  const [articles, setArticles] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchArticles() {
+      setIsLoading(true);
+      // Fetch articles, ordering by newest first. 
+      // Note: You can add .eq('status', 'Published') here later if you want to hide drafts!
+      const { data, error } = await supabase
+        .from('articles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setArticles(data);
+      } else if (error) {
+        console.error("Error fetching articles:", error);
+      }
+      setIsLoading(false);
+    }
+
+    fetchArticles();
+  }, []);
+
+  // Helper function to calculate read time based on word count
+  const calculateReadTime = (text: string) => {
+    if (!text) return "1 min read";
+    const words = text.split(/\s+/).length;
+    const minutes = Math.ceil(words / 200); // Avg reading speed is 200 words/min
+    return `${minutes} min read`;
+  };
+
   return (
     <main className="relative min-h-screen bg-botanical-green overflow-hidden">
 
@@ -51,7 +60,7 @@ export default function WellnessLibrary() {
             <Leaf size={18} className="text-clinical-white" />
           </div>
           <span className="font-serif text-base sm:text-lg tracking-widest text-clinical-white lowercase opacity-80">
-            naturalcareherbalmedicine
+            naturalcureherbalmedicine
           </span>
         </Link>
       </div>
@@ -79,46 +88,63 @@ export default function WellnessLibrary() {
         </header>
 
         {/* 4. ARTICLE LIST WITH BORDER LINES */}
-        <div className="flex flex-col border-t border-clinical-white/10">
-          {articles.map((article, index) => (
-            <motion.div 
-              key={article.id}
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Link 
-                href={`/library/${article.id}`} 
-                className="group flex flex-col md:flex-row justify-between items-start md:items-center py-10 sm:py-14 border-b border-clinical-white/10 hover:bg-clinical-white/[0.03] transition-all duration-300"
-              >
-                <div className="max-w-xl pr-4">
-                  <div className="flex items-center gap-4 mb-4">
-                    <span className="text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 bg-clinical-white/10 text-clinical-white/80 rounded-sm">
-                      {article.category}
-                    </span>
-                    <span className="text-[9px] uppercase tracking-widest text-clinical-white/30">
-                      {article.readTime}
-                    </span>
-                  </div>
-                  <h3 className="font-serif text-2xl sm:text-4xl text-clinical-white mb-4 group-hover:text-earth-silk transition-colors leading-tight">
-                    {article.title}
-                  </h3>
-                  <p className="font-sans text-clinical-white/50 text-base sm:text-lg font-light leading-relaxed line-clamp-2">
-                    {article.excerpt}
-                  </p>
-                </div>
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="animate-spin text-clinical-white/50" size={40} />
+          </div>
+        ) : (
+          <div className="flex flex-col border-t border-clinical-white/10">
+            {articles.length === 0 && (
+              <p className="text-clinical-white/50 py-10 font-light italic">The archives are currently being updated.</p>
+            )}
+            
+            {articles.map((article, index) => {
+              // Extract the first 120 characters for the excerpt
+              const excerpt = article.content ? article.content.substring(0, 120) + "..." : "";
+              // Use the first tag as the category, or default to "Clinical Science"
+              const category = article.tags && article.tags.length > 0 ? article.tags[0] : "Clinical Science";
 
-                <div className="mt-8 md:mt-0 flex items-center gap-4 text-clinical-white md:opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 md:translate-x-[-10px] md:group-hover:translate-x-0">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] hidden sm:block">Explore</span>
-                  <div className="w-10 h-10 rounded-full border border-clinical-white/20 flex items-center justify-center group-hover:border-clinical-white/50 group-hover:bg-clinical-white text-clinical-white group-hover:text-botanical-green transition-all">
-                    <ArrowRight size={18} />
-                  </div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
+              return (
+                <motion.div 
+                  key={article.id}
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Link 
+                    href={`/library/${article.id}`} 
+                    className="group flex flex-col md:flex-row justify-between items-start md:items-center py-10 sm:py-14 border-b border-clinical-white/10 hover:bg-clinical-white/[0.03] transition-all duration-300"
+                  >
+                    <div className="max-w-xl pr-4">
+                      <div className="flex items-center gap-4 mb-4">
+                        <span className="text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 bg-clinical-white/10 text-clinical-white/80 rounded-sm">
+                          {category}
+                        </span>
+                        <span className="text-[9px] uppercase tracking-widest text-clinical-white/30">
+                          {calculateReadTime(article.content)}
+                        </span>
+                      </div>
+                      <h3 className="font-serif text-2xl sm:text-4xl text-clinical-white mb-4 group-hover:text-earth-silk transition-colors leading-tight">
+                        {article.title}
+                      </h3>
+                      <p className="font-sans text-clinical-white/50 text-base sm:text-lg font-light leading-relaxed line-clamp-2">
+                        {excerpt}
+                      </p>
+                    </div>
+
+                    <div className="mt-8 md:mt-0 flex items-center gap-4 text-clinical-white md:opacity-0 group-hover:opacity-100 transition-all transform translate-x-0 md:translate-x-[-10px] md:group-hover:translate-x-0">
+                      <span className="text-[10px] font-bold uppercase tracking-[0.2em] hidden sm:block">Explore</span>
+                      <div className="w-10 h-10 rounded-full border border-clinical-white/20 flex items-center justify-center group-hover:border-clinical-white/50 group-hover:bg-clinical-white text-clinical-white group-hover:text-botanical-green transition-all">
+                        <ArrowRight size={18} />
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
 
       </div>
     </main>

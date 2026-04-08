@@ -13,6 +13,7 @@ export default function MemberLedger() {
   const [activeTab, setActiveTab] = useState("cart");
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isReceiptMode, setIsReceiptMode] = useState(false); // Toggle between Tracking and Receipt
   const router = useRouter();
 
   // --- REAL DATABASE STATE ---
@@ -35,7 +36,6 @@ export default function MemberLedger() {
       return;
     }
 
-    // Get Profile (Fetching '*' so we can check the welcome_email_sent flag)
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     
     setUserProfile({
@@ -43,49 +43,25 @@ export default function MemberLedger() {
       email: user.email || "",
     });
 
-    // --- NEW: THE EBOOK TRIGGER ---
-    // Using !== true catches BOTH false and null!
     if (profile && profile.welcome_email_sent !== true) {
       try {
-        console.log("Attempting to send eBook API...");
-        
-        // 1. Send the email via our new API
         const response = await fetch('/api/send-ebook', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: user.email, name: profile.full_name }),
         });
 
-        // 2. Only update the database IF the email successfully sent
         if (response.ok) {
-          console.log("Email sent successfully! Updating database...");
-          await supabase
-            .from('profiles')
-            .update({ welcome_email_sent: true })
-            .eq('id', user.id);
-        } else {
-          // If Resend failed, print the error to the browser console
-          const errorData = await response.json();
-          console.error("API refused to send:", errorData);
+          await supabase.from('profiles').update({ welcome_email_sent: true }).eq('id', user.id);
         }
       } catch (err) {
         console.error("Network failed to reach API:", err);
       }
     }
-    // --------------------------------
 
-    // --- FIXED TYPE CHECK ERROR HERE FOR VERCEL ---
     const { data: cartData } = await supabase
       .from('cart_items')
-      .select(`
-        id, 
-        quantity, 
-        product_id, 
-        products (
-          name, 
-          price
-        )
-      `)
+      .select(`id, quantity, product_id, products (name, price)`)
       .eq('user_id', user.id);
       
     if (cartData) {
@@ -98,10 +74,10 @@ export default function MemberLedger() {
       setCartItems(formattedCart);
     }
 
-    // Get Orders
+    // Fetched order_items too so receipt has the details!
     const { data: ordersData } = await supabase
       .from('orders')
-      .select('*')
+      .select('*, order_items(*)') 
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
@@ -126,13 +102,19 @@ export default function MemberLedger() {
 
   const openTracking = (order: any) => {
     setSelectedOrder(order);
+    setIsReceiptMode(false); // Show timeline by default for active orders
+    setShowDrawer(true);
+  };
+
+  const openReceipt = (order: any) => {
+    setSelectedOrder(order);
+    setIsReceiptMode(true); // Show receipt directly for past orders
     setShowDrawer(true);
   };
 
   // --- DYNAMIC CALCULATIONS ---
   const cartSubtotal = cartItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
-  // Dynamic tracking steps logic
   const statuses = ["Order Received", "In Formulation", "Ready for Dispatch", "Dispatched", "Delivered"];
   const currentStatusIndex = selectedOrder ? statuses.indexOf(selectedOrder.status) : 0;
 
@@ -147,7 +129,7 @@ export default function MemberLedger() {
   return (
     <main className="min-h-screen bg-earth-silk pt-24 pb-20 px-4 sm:px-6 relative overflow-x-hidden">
 
-      {/* --- TRACKING DRAWER OVERLAY --- */}
+      {/* --- TRACKING & RECEIPT DRAWER OVERLAY --- */}
       <AnimatePresence>
         {showDrawer && selectedOrder && (
           <>
@@ -159,44 +141,91 @@ export default function MemberLedger() {
             <motion.div 
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 h-full w-full max-w-[450px] bg-clinical-white z-[110] shadow-2xl flex flex-col"
+              className="fixed right-0 top-0 h-full w-full max-w-[500px] bg-clinical-white z-[110] shadow-2xl flex flex-col"
             >
-              <div className="p-8 border-b border-botanical-green/5 flex justify-between items-center">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-botanical-green/40 font-bold">Logistics Trace</p>
-                  <h2 className="font-serif text-2xl text-botanical-green">Order {selectedOrder.order_number}</h2>
+              <div className="p-6 md:p-8 border-b border-botanical-green/10 flex justify-between items-center bg-earth-silk/50">
+                <div className="flex gap-4">
+                  <button onClick={() => setIsReceiptMode(false)} className={`text-[10px] uppercase tracking-[0.2em] font-bold pb-1 ${!isReceiptMode ? 'border-b-2 border-botanical-green text-botanical-green' : 'text-botanical-green/40'}`}>Logistics Trace</button>
+                  <button onClick={() => setIsReceiptMode(true)} className={`text-[10px] uppercase tracking-[0.2em] font-bold pb-1 ${isReceiptMode ? 'border-b-2 border-botanical-green text-botanical-green' : 'text-botanical-green/40'}`}>Receipt View</button>
                 </div>
-                <button onClick={() => setShowDrawer(false)} className="p-3 bg-botanical-green/5 rounded-full text-botanical-green hover:bg-botanical-green hover:text-white transition-all">
-                  <X size={20} />
-                </button>
+                <button onClick={() => setShowDrawer(false)} className="p-2 bg-botanical-green/5 rounded-full text-botanical-green hover:bg-botanical-green hover:text-white transition-all"><X size={18} /></button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 md:p-12">
-                <div className="relative space-y-12 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-botanical-green/10">
-                  {trackingSteps.map((step, i) => (
-                    <div key={i} className="flex gap-6 relative">
-                      <div className={`w-[24px] h-[24px] rounded-full flex items-center justify-center shrink-0 z-10 transition-colors duration-500
-                        ${step.status === 'complete' ? 'bg-botanical-green text-white' : 
-                          step.status === 'current' ? 'bg-white border-2 border-botanical-green animate-pulse' : 'bg-earth-silk border border-botanical-green/10'}`}>
-                        {step.status === 'complete' && <CheckCircle2 size={14} />}
-                      </div>
+              <div className="flex-1 overflow-y-auto p-6 md:p-8">
+                {!isReceiptMode ? (
+                  // LOGISTICS TRACKING VIEW
+                  <>
+                    <h2 className="font-serif text-2xl text-botanical-green mb-8">Order {selectedOrder.order_number}</h2>
+                    <div className="relative space-y-12 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[1px] before:bg-botanical-green/10">
+                      {trackingSteps.map((step, i) => (
+                        <div key={i} className="flex gap-6 relative">
+                          <div className={`w-[24px] h-[24px] rounded-full flex items-center justify-center shrink-0 z-10 transition-colors duration-500
+                            ${step.status === 'complete' ? 'bg-botanical-green text-white' : 
+                              step.status === 'current' ? 'bg-white border-2 border-botanical-green animate-pulse' : 'bg-earth-silk border border-botanical-green/10'}`}>
+                            {step.status === 'complete' && <CheckCircle2 size={14} />}
+                          </div>
+                          <div>
+                            <p className={`text-xs font-bold uppercase tracking-widest ${step.status === 'pending' ? 'text-botanical-green/20' : 'text-botanical-green'}`}>
+                              {step.title}
+                            </p>
+                            <p className="text-[11px] text-botanical-green/40 font-light mt-1">{step.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  // CLINICAL RECEIPT VIEW
+                  <div className="bg-white border border-gray-200 p-8 shadow-sm">
+                    <div className="text-center mb-8 border-b border-gray-200 pb-8">
+                      <h1 className="font-serif text-2xl text-black tracking-widest uppercase">Natural Cure</h1>
+                      <p className="text-[9px] uppercase tracking-[0.3em] text-gray-500 mt-1">Clinical Botanical Apothecary</p>
+                    </div>
+                    
+                    <div className="flex justify-between text-sm text-black mb-8">
                       <div>
-                        <p className={`text-xs font-bold uppercase tracking-widest ${step.status === 'pending' ? 'text-botanical-green/20' : 'text-botanical-green'}`}>
-                          {step.title}
-                        </p>
-                        <p className="text-[11px] text-botanical-green/40 font-light mt-1">{step.desc}</p>
+                        <p className="text-[9px] uppercase text-gray-400 mb-1">Billed To</p>
+                        <p className="font-bold">{selectedOrder.customer_name}</p>
+                        <p>{selectedOrder.customer_phone}</p>
+                        <p className="max-w-[150px]">{selectedOrder.shipping_address}, {selectedOrder.city}, {selectedOrder.state}, {selectedOrder.country}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[9px] uppercase text-gray-400 mb-1">Receipt Details</p>
+                        <p><span className="text-gray-500">No:</span> {selectedOrder.order_number}</p>
+                        <p><span className="text-gray-500">Date:</span> {new Date(selectedOrder.created_at).toLocaleDateString()}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
+
+                    <table className="w-full text-sm text-black mb-8 border-t border-gray-200 pt-4">
+                      <tbody>
+                        {selectedOrder.order_items?.map((item: any, idx: number) => (
+                          <tr key={idx} className="border-b border-gray-100">
+                            <td className="py-4 font-serif">{item.product_name}</td>
+                            <td className="py-4 text-center">{item.quantity}</td>
+                            <td className="py-4 text-right">₦{item.unit_price.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div className="flex justify-between text-sm border-t border-gray-200 pt-4 mb-2">
+                      <span className="text-gray-500">Shipping</span>
+                      <span>₦{selectedOrder.shipping_fee.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-end text-lg font-bold">
+                      <span>Total: ₦{selectedOrder.total_amount.toLocaleString()}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="p-8 bg-botanical-green/5 border-t border-botanical-green/5">
-                <div className="flex items-center gap-4 text-botanical-green/60 italic text-xs font-bold">
-                  <Truck size={16} />
-                  <span>Logistics Partner: Fez Delivery (Est. 2-3 Days)</span>
+              {!isReceiptMode && (
+                <div className="p-8 bg-botanical-green/5 border-t border-botanical-green/5">
+                  <div className="flex items-center gap-4 text-botanical-green/60 italic text-xs font-bold">
+                    <Truck size={16} />
+                    <span>Logistics Partner: Fez Delivery (Est. 2-3 Days)</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </motion.div>
           </>
         )}
@@ -216,8 +245,18 @@ export default function MemberLedger() {
           </div>
 
           <div className="flex flex-wrap items-center gap-4 md:gap-8">
-            <button onClick={() => setActiveTab("cart")} className={`text-[10px] md:text-[11px] uppercase tracking-widest font-bold transition-all relative py-2 ${activeTab === 'cart' ? 'text-botanical-green' : 'text-botanical-green/30'}`}>Ledger ({cartItems.length}) {activeTab === 'cart' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 w-full h-[2px] bg-botanical-green" />}</button>
-            <button onClick={() => setActiveTab("tracking")} className={`text-[10px] md:text-[11px] uppercase tracking-widest font-bold transition-all relative py-2 ${activeTab === 'tracking' ? 'text-botanical-green' : 'text-botanical-green/30'}`}>Order History {activeTab === 'tracking' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 w-full h-[2px] bg-botanical-green" />}</button>
+            <button onClick={() => setActiveTab("cart")} className={`flex items-center gap-2 text-[10px] md:text-[11px] uppercase tracking-widest font-bold transition-all relative py-2 ${activeTab === 'cart' ? 'text-botanical-green' : 'text-botanical-green/30'}`}>
+              Ledger ({cartItems.length}) {activeTab === 'cart' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 w-full h-[2px] bg-botanical-green" />}
+            </button>
+            <button onClick={() => setActiveTab("tracking")} className={`flex items-center gap-2 text-[10px] md:text-[11px] uppercase tracking-widest font-bold transition-all relative py-2 ${activeTab === 'tracking' ? 'text-botanical-green' : 'text-botanical-green/30'}`}>
+              Order History 
+              {activeOrders.length > 0 && (
+                <span className="bg-botanical-green text-clinical-white w-4 h-4 flex items-center justify-center rounded-full text-[8px]">
+                  {activeOrders.length}
+                </span>
+              )}
+              {activeTab === 'tracking' && <motion.div layoutId="tab" className="absolute bottom-0 left-0 w-full h-[2px] bg-botanical-green" />}
+            </button>
             <button onClick={handleLogout} className="p-2 hover:bg-botanical-green/5 rounded-full transition-colors ml-auto md:ml-0"><LogOut size={18} className="text-botanical-green/20" /></button>
           </div>
         </header>
@@ -275,7 +314,8 @@ export default function MemberLedger() {
                     {pastOrders.map((order) => (
                       <div key={order.id} className="bg-white/40 p-5 flex flex-col sm:flex-row justify-between items-center border border-botanical-green/5 group hover:bg-white transition-all mb-4">
                         <div className="flex items-center gap-4 w-full sm:w-auto"><Package size={16} className="text-botanical-green/30" /><div><p className="text-[10px] font-bold text-botanical-green/60">{order.order_number} — {new Date(order.created_at).toLocaleDateString()}</p><p className="text-xs text-botanical-green font-serif">Settlement: ₦{order.total_amount.toLocaleString()}</p></div></div>
-                        <button className="mt-4 sm:mt-0 flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold bg-botanical-green/5 hover:bg-botanical-green hover:text-white px-5 py-2.5 rounded-full transition-all w-full sm:w-auto justify-center"><RefreshCw size={12} /> View Receipt</button>
+                        {/* CHANGED to openReceipt logic */}
+                        <button onClick={() => openReceipt(order)} className="mt-4 sm:mt-0 flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold bg-botanical-green/5 hover:bg-botanical-green hover:text-white px-5 py-2.5 rounded-full transition-all w-full sm:w-auto justify-center"><RefreshCw size={12} /> View Receipt</button>
                       </div>
                     ))}
                   </div>

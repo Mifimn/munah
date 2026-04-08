@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   LayoutDashboard, Boxes, ListOrdered, Settings, Search, 
-  X, ShieldCheck, FileText, Eye, MapPin, Truck, Printer, CheckCircle2, ChevronRight, Package, Loader2
+  X, ShieldCheck, FileText, Eye, MapPin, Truck, Printer, CheckCircle2, ChevronRight, Package, Loader2, AlertTriangle, Send, Lock
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -15,9 +15,13 @@ export default function OrderManagement() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isReceiptMode, setIsReceiptMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const pathname = usePathname() || "/admin/orders";
+
+  // --- STATUS UPDATE STATE ---
+  const [stagedStatus, setStagedStatus] = useState("");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -27,10 +31,7 @@ export default function OrderManagement() {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('orders')
-      .select(`
-        *,
-        order_items (*)
-      `)
+      .select(`*, order_items (*)`)
       .order('created_at', { ascending: false });
 
     if (!error && data) {
@@ -39,42 +40,88 @@ export default function OrderManagement() {
     setIsLoading(false);
   }
 
-  const updateStatus = async (orderId: string, newStatus: string) => {
-    setIsUpdating(true);
-    const { error } = await supabase
-      .from('orders')
-      .update({ status: newStatus })
-      .eq('id', orderId);
-
-    if (!error) {
-      setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-      // FIXED: Added (prev: any) to satisfy TypeScript compiler
-      setSelectedOrder((prev: any) => prev ? { ...prev, status: newStatus } : null);
-    }
-    setIsUpdating(false);
-  };
-
   const openOrderDetails = (order: any) => {
     setSelectedOrder(order);
+    setStagedStatus(order.status); 
     setIsReceiptMode(false);
   };
 
-  // --- STATS CALCULATION ---
+  const confirmAndUpdateStatus = async () => {
+    if (!selectedOrder) return;
+    setIsUpdating(true);
+
+    try {
+      // 1. Update Database
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: stagedStatus })
+        .eq('id', selectedOrder.id);
+
+      if (error) throw error;
+
+      // 2. Update Local State UI instantly
+      setOrders(orders.map(o => o.id === selectedOrder.id ? { ...o, status: stagedStatus } : o));
+      setSelectedOrder({ ...selectedOrder, status: stagedStatus });
+
+      // 3. Send automated email via secure API route
+      await fetch('/api/send-status-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: selectedOrder.customer_email,
+          name: selectedOrder.customer_name,
+          orderNumber: selectedOrder.order_number,
+          status: stagedStatus
+        })
+      });
+
+    } catch (error) {
+      console.error("Failed to update status:", error);
+      alert("Error updating status. Please check your connection.");
+    } finally {
+      setIsUpdating(false);
+      setShowConfirmModal(false);
+    }
+  };
+
   const pendingDispatch = orders.filter(o => o.status === 'Ready for Dispatch').length;
   const inFormulation = orders.filter(o => o.status === 'In Formulation').length;
   const dailyRevenue = orders
     .filter(o => new Date(o.created_at).toDateString() === new Date().toDateString())
     .reduce((acc, o) => acc + o.total_amount, 0);
 
-  // --- SEARCH FILTER ---
   const filteredOrders = orders.filter(o => 
     o.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
     o.customer_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <main className="min-h-screen bg-earth-silk flex flex-col lg:flex-row">
+    <main className="min-h-screen bg-earth-silk flex flex-col lg:flex-row relative">
       
+      {/* --- CONFIRMATION MODAL --- */}
+      <AnimatePresence>
+        {showConfirmModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => !isUpdating && setShowConfirmModal(false)} className="absolute inset-0 bg-botanical-green/60 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative w-full max-w-md bg-clinical-white shadow-2xl p-8 border border-botanical-green/10 text-center">
+              <div className="w-16 h-16 bg-botanical-green/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Send size={24} className="text-botanical-green ml-1" />
+              </div>
+              <h3 className="font-serif text-2xl text-botanical-green mb-2">Update & Notify Patient?</h3>
+              <p className="text-sm text-botanical-green/60 mb-8">
+                Changing status to <strong>{stagedStatus}</strong>. An automated email will be sent to {selectedOrder?.customer_email} with this update.
+              </p>
+              <div className="flex gap-4">
+                <button disabled={isUpdating} onClick={() => setShowConfirmModal(false)} className="flex-1 bg-botanical-green/5 text-botanical-green py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-botanical-green/10 transition-colors disabled:opacity-50">Cancel</button>
+                <button disabled={isUpdating} onClick={confirmAndUpdateStatus} className="flex-1 bg-botanical-green text-clinical-white py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-botanical-green/90 transition-colors shadow-lg flex justify-center items-center gap-2">
+                  {isUpdating ? <Loader2 size={16} className="animate-spin" /> : 'Confirm & Send'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* --- 1. DESKTOP SIDEBAR --- */}
       <aside className="w-[280px] bg-botanical-green fixed h-full z-20 hidden lg:flex flex-col">
         <div className="p-8 border-b border-clinical-white/10">
@@ -138,13 +185,20 @@ export default function OrderManagement() {
                     </div>
 
                     <div>
-                      <label className="text-[10px] uppercase tracking-widest text-botanical-green/60 font-bold">Status Update</label>
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] uppercase tracking-widest text-botanical-green/60 font-bold">Status Stage</label>
+                        {selectedOrder.status === 'Delivered' && (
+                          <span className="flex items-center gap-1 text-[9px] uppercase tracking-widest font-bold text-botanical-green bg-botanical-green/10 px-2 py-1 rounded-sm">
+                            <Lock size={10} /> Record Sealed
+                          </span>
+                        )}
+                      </div>
                       <div className="relative mt-2">
                         <select 
-                          value={selectedOrder.status}
-                          onChange={(e) => updateStatus(selectedOrder.id, e.target.value)}
-                          disabled={isUpdating}
-                          className="w-full border border-botanical-green/20 py-4 px-4 outline-none focus:border-botanical-green bg-botanical-green/5 text-sm font-bold text-botanical-green appearance-none rounded-sm cursor-pointer"
+                          value={stagedStatus}
+                          onChange={(e) => setStagedStatus(e.target.value)}
+                          disabled={selectedOrder.status === 'Delivered'} // DISABLED IF DELIVERED
+                          className="w-full border border-botanical-green/20 py-4 px-4 outline-none focus:border-botanical-green bg-botanical-green/5 text-sm font-bold text-botanical-green appearance-none rounded-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value="Order Received">Order Received</option>
                           <option value="In Formulation">In Formulation</option>
@@ -152,7 +206,6 @@ export default function OrderManagement() {
                           <option value="Dispatched">Dispatched</option>
                           <option value="Delivered">Delivered</option>
                         </select>
-                        {isUpdating && <Loader2 className="absolute right-4 top-4 animate-spin text-botanical-green" size={20} />}
                       </div>
                     </div>
 
@@ -212,8 +265,14 @@ export default function OrderManagement() {
                 )}
               </div>
 
+              {/* ACTION BUTTON -> Triggers Confirmation Modal */}
               <div className="p-6 md:p-8 bg-earth-silk border-t border-botanical-green/10 flex gap-4">
-                <button className="w-full bg-botanical-green text-clinical-white py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] shadow-xl hover:bg-botanical-green/90 transition-all flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => setShowConfirmModal(true)}
+                  // DISABLED IF: They haven't changed the dropdown OR the order is already Delivered
+                  disabled={stagedStatus === selectedOrder.status || selectedOrder.status === 'Delivered'}
+                  className="w-full bg-botanical-green text-clinical-white py-4 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] shadow-xl hover:bg-botanical-green/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:bg-botanical-green disabled:cursor-not-allowed"
+                >
                   <Truck size={14} /> Update Dispatch Status
                 </button>
               </div>
@@ -228,7 +287,7 @@ export default function OrderManagement() {
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8 md:mb-12 border-b border-botanical-green/10 pb-8">
           <div>
             <h2 className="font-serif text-3xl md:text-4xl text-botanical-green tracking-tighter">Order Logistics</h2>
-            <p className="text-xs md:text-sm text-botanical-green/50 mt-2">Manage formulations, dispatch, and receipts.</p>
+            <p className="text-xs md:text-sm text-botanical-green/50 mt-2">Manage formulations, dispatch, and patient communications.</p>
           </div>
         </header>
 
@@ -243,7 +302,7 @@ export default function OrderManagement() {
         <div className="bg-clinical-white border border-botanical-green/5 shadow-sm rounded-sm overflow-hidden w-full">
           <div className="p-4 md:p-6 border-b border-botanical-green/5 bg-earth-silk/30 flex items-center gap-3">
              <Search size={14} className="text-botanical-green/40" />
-             <input type="text" placeholder="Search Patient or Order ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent outline-none text-xs text-botanical-green" />
+             <input type="text" placeholder="Search Patient or Order ID..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-transparent outline-none text-xs text-botanical-green w-full max-w-md" />
           </div>
           
           <div className="w-full overflow-x-auto">
@@ -272,7 +331,7 @@ export default function OrderManagement() {
                       <td className="p-4 md:p-6 text-xs text-botanical-green/60">{new Date(order.created_at).toLocaleDateString()}</td>
                       <td className="p-4 md:p-6 font-sans text-sm text-botanical-green font-bold">₦{order.total_amount.toLocaleString()}</td>
                       <td className="p-4 md:p-6">
-                        <span className={`text-[9px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full ${
+                        <span className={`text-[9px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full whitespace-nowrap ${
                           order.status === 'Delivered' ? 'bg-botanical-green/10 text-botanical-green' : 
                           order.status === 'Ready for Dispatch' ? 'bg-yellow-500/10 text-yellow-700' : 
                           'bg-botanical-green text-white'

@@ -4,30 +4,35 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 
-const categories = [
+// Updated Data Array using real Product Names and local paths from /public
+const foundationalProducts = [
   { 
     id: 1, 
-    name: "Men's Health", 
-    image: "https://images.unsplash.com/photo-1550573104-4eb82614b425?q=80&w=800&auto=format&fit=crop", 
-    link: "/shop?category=mens-health" 
+    name: "Original Honey", 
+    // Image expected at public/original-honey.jpg
+    image: "/original-honey.jpg", 
+    link: "/shop?product=original-honey" 
   },
   { 
     id: 2, 
-    name: "Infections", 
-    image: "https://images.unsplash.com/photo-1617897903246-719242758050?q=80&w=800&auto=format&fit=crop", 
-    link: "/shop?category=infections" 
+    name: "Camel Milk", 
+    // Image expected at public/camel-milk.jpg
+    image: "/camel-milk.jpg", 
+    link: "/shop?product=camel-milk" 
   },
   { 
     id: 3, 
-    name: "Weight Management", 
-    image: "https://images.unsplash.com/photo-1512106373293-67c8413894aa?q=80&w=800&auto=format&fit=crop", 
-    link: "/shop?category=weight-management" 
+    name: "Breast Firming Oil", 
+    // Image expected at public/breast-firming-oil.jpg
+    image: "/breast-firming-oil.jpg", 
+    link: "/shop?product=breast-firming-oil" 
   },
   { 
     id: 4, 
-    name: "Immunity Boost", 
-    image: "https://images.unsplash.com/photo-1608222351212-18fe0ec7b13b?q=80&w=1000&auto=format&fit=crop", 
-    link: "/shop?category=immunity" 
+    name: "Weight Gain Powder", 
+    // Image expected at public/weight-gain-powder.jpg
+    image: "/weight-gain-powder.jpg", 
+    link: "/shop?product=weight-gain-powder" 
   },
 ];
 
@@ -42,10 +47,10 @@ export default function CategoryGrid() {
           viewport={{ once: true }}
         >
           <h2 className="font-serif text-4xl sm:text-5xl text-botanical-green tracking-tight">
-            Targeted Healing
+            Foundational Remedies
           </h2>
           <p className="font-sans text-sm sm:text-base text-botanical-green/60 mt-2 font-light">
-            Select your primary health focus.
+            Explore our cornerstone clinical formulas.
           </p>
         </motion.div>
         <Link href="/shop" className="hidden sm:flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-botanical-green hover:opacity-60 transition-opacity">
@@ -56,32 +61,29 @@ export default function CategoryGrid() {
       {/* Grid Container */}
       <div className="w-full max-w-[1400px] mx-auto lg:px-8">
         <div className="w-full grid grid-cols-2 lg:grid-cols-4 gap-[2px] lg:gap-6 bg-botanical-green/5 lg:bg-transparent">
-          {categories.map((cat, index) => (
+          {foundationalProducts.map((prod, index) => (
             <motion.div
-              key={cat.id}
+              key={prod.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
             >
-              <Link href={cat.link} className="relative group block overflow-hidden bg-earth-silk aspect-[4/5] sm:aspect-auto sm:h-[600px]">
+              <Link href={prod.link} className="relative group block overflow-hidden bg-earth-silk aspect-[4/5] sm:aspect-auto sm:h-[600px]">
 
-                {/* Background Image: Lightened opacity and softer blend */}
+                {/* Background Image: Fetched from public folder */}
                 <div 
                   className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 ease-in-out group-hover:scale-105 opacity-90"
-                  style={{ backgroundImage: `url(${cat.image})` }}
+                  style={{ backgroundImage: `url(${prod.image})` }}
                 />
 
-                {/* LIGHT OVERLAY: 
-                    Switched from 90% opacity to a soft 60% gradient 
-                    that only exists at the bottom where the text is.
-                */}
+                {/* Light gradient overlay for text readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-botanical-green/60 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-500" />
 
                 {/* Content pinned to the bottom */}
                 <div className="absolute bottom-0 left-0 w-full p-5 sm:p-8 flex justify-between items-end z-20">
-                  <h3 className="font-serif text-2xl sm:text-3xl text-clinical-white leading-tight drop-shadow-sm">
-                    {cat.name}
+                  <h3 className="font-serif text-2xl sm:text-3xl text-clinical-white leading-tight drop-shadow-sm max-w-[70%]">
+                    {prod.name}
                   </h3>
 
                   {/* Elegant floating arrow button */}

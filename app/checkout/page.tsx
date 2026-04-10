@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Truck, ChevronRight, Globe, MapPin, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { ShieldCheck, Truck, ChevronRight, Globe, MapPin, Loader2, CheckCircle2, AlertCircle, CreditCard } from "lucide-react";
 import { Country, State } from "country-state-city";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { usePaystackPayment } from "react-paystack"; // --- NEW IMPORT ---
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -44,16 +45,14 @@ export default function CheckoutPage() {
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push("/account"); // Redirect if not logged in
+        router.push("/account"); 
         return;
       }
       
       setUser(user);
-      // Pre-fill email if we have it
       setFormData(prev => ({ ...prev, email: user.email || "" }));
 
-      // Fetch cart items and join with product data
-      const { data: cartData, error } = await supabase
+      const { data: cartData } = await supabase
         .from('cart_items')
         .select(`
           id,
@@ -72,14 +71,60 @@ export default function CheckoutPage() {
     loadCheckoutData();
   }, [router]);
 
-  // --- DYNAMIC SUBTOTAL CALCULATION ---
+  // --- DYNAMIC TOTALS & PAYSTACK FEE CALCULATION ---
   const subtotal = cartItems.reduce((acc, item) => {
-    // Uses variant price if it exists, otherwise base price
     const unitPrice = item.products.variants?.[0]?.price || item.products.price || 0;
     return acc + (unitPrice * item.quantity);
   }, 0);
 
-  const totalSettlement = subtotal + shippingFee;
+  // Calculate Paystack precise gateway fee so Modina gets exact amount
+  const calculatePaystackFee = (baseAmount: number, isInternational: boolean) => {
+    if (baseAmount === 0) return 0;
+    let fee = 0;
+    if (isInternational) {
+      // Int. Rate: 3.9% + NGN 100
+      fee = ((baseAmount + 100) / 0.961) - baseAmount;
+    } else {
+      // Local Rate: 1.5% + NGN 100 (Waived if under 2500)
+      if (baseAmount < 2500) {
+        fee = (baseAmount / 0.985) - baseAmount;
+      } else {
+        fee = ((baseAmount + 100) / 0.985) - baseAmount;
+      }
+      // Local fee cap is NGN 2000
+      if (fee > 2000) fee = 2000;
+    }
+    return Math.ceil(fee); // Round up to nearest Naira
+  };
+
+  const isIntl = selectedCountry !== "NG" && selectedCountry !== "";
+  const baseTotal = subtotal + shippingFee;
+  const paystackFee = calculatePaystackFee(baseTotal, isIntl);
+  const finalTotalSettlement = baseTotal + paystackFee;
+
+  // --- PAYSTACK CONFIGURATION ---
+  const config = {
+    reference: `NCHM-${new Date().getTime().toString()}`, // Unique Order Number
+    email: formData.email,
+    amount: finalTotalSettlement * 100, // Paystack requires amount in Kobo
+    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY as string,
+    metadata: {
+      custom_fields: [
+        {
+          display_name: "Customer Name",
+          variable_name: "customer_name",
+          value: `${formData.firstName} ${formData.lastName}`
+        },
+        {
+          display_name: "Phone Number",
+          variable_name: "phone_number",
+          value: formData.phone
+        }
+      ]
+    }
+  };
+
+  const initializePayment = usePaystackPayment(config);
 
   // --- INPUT HANDLERS ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,38 +161,25 @@ export default function CheckoutPage() {
     }
   };
 
-  // --- SUBMIT ORDER LOGIC ---
-  const handleCheckout = async () => {
-    setError("");
-
-    // 1. Validation
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !selectedCountry || !selectedState) {
-      setError("Please fill out all delivery and contact fields securely.");
-      return;
-    }
-    if (cartItems.length === 0) {
-      setError("Your ledger is currently empty.");
-      return;
-    }
-
-    setIsProcessing(true);
+  // --- SUCCESSFUL PAYMENT HANDLER ---
+  const onSuccess = async (reference: any) => {
+    setIsProcessing(true); // Show loader while saving to DB
 
     try {
-      // 2. Generate Unique Order Number (e.g. NCHM-847291)
-      const orderNumber = `NCHM-${Math.floor(100000 + Math.random() * 900000)}`;
-
-      // 3. Insert Main Order Record
+      // 1. Insert Main Order Record
       const { data: orderRecord, error: orderError } = await supabase
         .from('orders')
         .insert({
-          order_number: orderNumber,
+          order_number: reference.reference, // Matches Paystack Ref exactly
+          payment_reference: reference.reference, // Saved for webhook tracking
+          payment_status: 'paid', // Marked as paid instantly
           customer_name: `${formData.firstName} ${formData.lastName}`,
           customer_email: formData.email,
           customer_phone: formData.phone,
           shipping_address: `${formData.address}, ${formData.city}`,
           country: selectedCountry,
           state: selectedState,
-          total_amount: totalSettlement,
+          total_amount: finalTotalSettlement,
           shipping_fee: shippingFee,
           status: 'Order Received',
           user_id: user.id
@@ -157,7 +189,7 @@ export default function CheckoutPage() {
 
       if (orderError) throw orderError;
 
-      // 4. Format & Insert Order Items
+      // 2. Format & Insert Order Items
       const itemsToInsert = cartItems.map(item => ({
         order_id: orderRecord.id,
         product_name: item.products.name,
@@ -168,10 +200,22 @@ export default function CheckoutPage() {
       const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert);
       if (itemsError) throw itemsError;
 
-      // 5. Clear the Cart
+      // 3. Clear the Cart
       await supabase.from('cart_items').delete().eq('user_id', user.id);
 
-      // 6. Show Success & Redirect
+      // 4. Send Admin Alert Email (Running in background)
+      fetch('/api/send-admin-alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderNumber: reference.reference,
+          customerName: `${formData.firstName} ${formData.lastName}`,
+          customerPhone: formData.phone,
+          totalAmount: finalTotalSettlement
+        })
+      }).catch(err => console.error("Admin alert failed:", err));
+
+      // 5. Show Success & Redirect
       setSuccess(true);
       setTimeout(() => {
         router.push("/account/ledger");
@@ -179,11 +223,38 @@ export default function CheckoutPage() {
 
     } catch (err: any) {
       console.error(err);
-      setError("Order processing failed. Please try again or contact support.");
+      setError("Payment received, but saving order failed. Please contact support.");
     } finally {
       setIsProcessing(false);
     }
   };
+
+  // --- CANCELED PAYMENT HANDLER ---
+  const onClose = () => {
+    setIsProcessing(false);
+    // You can add a small error/toast message here if you want
+  };
+
+  // --- SUBMIT BUTTON LOGIC ---
+  const handleCheckoutClick = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    // Validation
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !selectedCountry || !selectedState) {
+      setError("Please fill out all delivery and contact fields securely.");
+      return;
+    }
+    if (cartItems.length === 0) {
+      setError("Your ledger is currently empty.");
+      return;
+    }
+
+    // Trigger the Paystack Pop-up
+    setIsProcessing(true);
+    initializePayment({ onSuccess, onClose });
+  };
+
 
   if (isLoadingCart) {
     return <main className="min-h-screen bg-earth-silk flex justify-center items-center"><Loader2 size={40} className="animate-spin text-botanical-green/40" /></main>;
@@ -198,7 +269,7 @@ export default function CheckoutPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-botanical-green/40 backdrop-blur-md">
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-clinical-white p-12 max-w-md w-full text-center shadow-2xl border border-botanical-green/10">
               <CheckCircle2 size={64} className="text-botanical-green mx-auto mb-6" />
-              <h2 className="font-serif text-3xl text-botanical-green mb-4">Order Secured</h2>
+              <h2 className="font-serif text-3xl text-botanical-green mb-4">Payment Secured</h2>
               <p className="text-sm text-botanical-green/60 mb-8 leading-relaxed">
                 Your remedies are being prepared by the apothecary. We are redirecting you to your ledger...
               </p>
@@ -261,15 +332,15 @@ export default function CheckoutPage() {
               <h3 className="font-serif text-xl">Encrypted Settlement</h3>
             </div>
             <p className="text-xs text-botanical-green/50 mb-8 leading-relaxed">
-              Your transaction is secured by clinical-grade encryption protocol.
+              Your transaction is secured by clinical-grade encryption protocol via Paystack.
             </p>
             <button 
-              onClick={handleCheckout}
+              onClick={handleCheckoutClick}
               disabled={isProcessing || cartItems.length === 0}
               className="w-full flex justify-center items-center gap-3 bg-botanical-green text-clinical-white py-5 rounded-full text-xs font-bold uppercase tracking-widest shadow-xl hover:bg-botanical-green/90 transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {isProcessing ? <Loader2 size={16} className="animate-spin" /> : null}
-              {isProcessing ? "Processing Ledger..." : `Finalize Order — ₦${totalSettlement.toLocaleString()}`}
+              {isProcessing ? "Connecting to Bank..." : `Pay Securely — ₦${finalTotalSettlement.toLocaleString()}`}
             </button>
           </div>
         </div>
@@ -309,9 +380,14 @@ export default function CheckoutPage() {
                   {shippingFee === 0 && !selectedCountry ? "Calculated at checkout" : `₦${shippingFee.toLocaleString()}`}
                 </span>
               </div>
-              <div className="flex justify-between text-xl font-serif text-botanical-green pt-4 border-t border-botanical-green/10">
+              <div className="flex justify-between text-xs text-botanical-green/60 border-b border-botanical-green/5 pb-4">
+                <span className="flex items-center gap-2"><CreditCard size={14}/> Gateway Fee</span>
+                <span>₦{paystackFee.toLocaleString()}</span>
+              </div>
+              
+              <div className="flex justify-between text-xl font-serif text-botanical-green pt-2">
                 <span>Total Settlement</span>
-                <span>₦{totalSettlement.toLocaleString()}</span>
+                <span>₦{finalTotalSettlement.toLocaleString()}</span>
               </div>
             </div>
           </div>

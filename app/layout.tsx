@@ -4,6 +4,7 @@ import "./globals.css";
 import Sidebar from "./components/Sidebar";
 import ConsultationToggle from "./components/ConsultationToggle";
 import Footer from "./components/Footer";
+import AnnouncementBar from "./components/AnnouncementBar";
 
 // Configure Inter for clean, clinical sans-serif text (UI/Body)
 const inter = Inter({ 
@@ -127,6 +128,7 @@ export default function RootLayout({
       <body 
         className={`${inter.variable} ${playfair.variable} font-sans bg-earth-silk text-botanical-green antialiased min-h-screen flex flex-col`}
       >
+        <AnnouncementBar />
         <Sidebar />
         <ConsultationToggle />
         <main className="flex-grow relative">

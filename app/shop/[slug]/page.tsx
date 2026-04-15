@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Minus, Star, ArrowUpRight, ChevronDown, Leaf, Droplet, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase"; // Live DB connection
+import { supabase } from "@/lib/supabase"; 
 
 export default function ProductDetails({ params }: { params: Promise<{ slug: string }> }) {
   // UNWRAP PARAMS HERE FOR NEXT.JS 15+
@@ -19,7 +19,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
 
   // Interactive States
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState<any>(null); // NEW: Dynamic variant state
+  const [selectedVariant, setSelectedVariant] = useState<any>(null); 
   const [activeSection, setActiveSection] = useState<string | null>("ingredients");
 
   // Fetch Data on Load
@@ -51,7 +51,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
           .select('*')
           .eq('category_name', currentProduct.category_name)
           .neq('id', currentProduct.id)
-          .limit(4); // Changed from 3 to 4
+          .limit(4); 
           
         if (related) setRelatedProducts(related);
       }
@@ -62,28 +62,49 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
     fetchProduct();
   }, [slug]);
 
-  // Handle Add to Cart Database Logic
+  // --- FIXED: Smart Add to Cart Logic ---
   const handleAddToCart = async () => {
     setIsAdding(true);
     const { data: { user } } = await supabase.auth.getUser();
     
-    // If not logged in, send them to login page
     if (!user) {
       router.push("/account");
       return;
     }
 
-    // Insert into their personal ledger
-    // Note: If you want to save the EXACT size they picked, you may need to add a 'variant_size' column to your cart_items table in the future!
-    const { error } = await supabase.from('cart_items').insert({
-      user_id: user.id,
-      product_id: product.id,
-      quantity: quantity
-    });
+    // 1. Check if this product is already in their cart
+    const { data: existingCartItem } = await supabase
+      .from('cart_items')
+      .select('id, quantity')
+      .eq('user_id', user.id)
+      .eq('product_id', product.id)
+      .maybeSingle(); // maybeSingle prevents crash if it doesn't exist yet
 
-    if (!error) {
-      router.push("/account/ledger"); // Redirect to their cart after adding
+    if (existingCartItem) {
+      // 2. If it exists, UPDATE it by adding the new quantity to the old quantity
+      const { error } = await supabase
+        .from('cart_items')
+        .update({ 
+          quantity: existingCartItem.quantity + quantity 
+        })
+        .eq('id', existingCartItem.id);
+
+      if (!error) router.push("/account/ledger");
+    } else {
+      // 3. If it does not exist, INSERT a brand new row with the quantity
+      const { error } = await supabase
+        .from('cart_items')
+        .insert({
+          user_id: user.id,
+          product_id: product.id,
+          quantity: quantity,
+          // NOTE: If you added a variant_size column to your DB, uncomment the line below!
+          // variant_size: selectedVariant?.size || 'Standard'
+        });
+
+      if (!error) router.push("/account/ledger");
     }
+
     setIsAdding(false);
   };
 
@@ -306,7 +327,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
         </div>
       </div>
 
-      {/* 3. RELATED PRODUCTS SECTION (Upgraded to 4 items) */}
+      {/* 3. RELATED PRODUCTS SECTION */}
       {relatedProducts.length > 0 && (
         <section className="w-full pt-32 px-6 sm:px-12 max-w-[1600px] mx-auto border-t border-botanical-green/10 mt-12">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12 gap-6">

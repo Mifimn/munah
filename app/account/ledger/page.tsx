@@ -7,13 +7,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase"; // Live DB connection
+import { supabase } from "@/lib/supabase"; 
 
 export default function MemberLedger() {
   const [activeTab, setActiveTab] = useState("cart");
   const [showDrawer, setShowDrawer] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [isReceiptMode, setIsReceiptMode] = useState(false); // Toggle between Tracking and Receipt
+  const [isReceiptMode, setIsReceiptMode] = useState(false); 
   const router = useRouter();
 
   // --- REAL DATABASE STATE ---
@@ -59,22 +59,32 @@ export default function MemberLedger() {
       }
     }
 
+    // FIXED: Now fetching variants so we can calculate the correct size price
     const { data: cartData } = await supabase
       .from('cart_items')
-      .select(`id, quantity, product_id, products (name, price)`)
+      .select(`
+        id, 
+        quantity, 
+        product_id, 
+        products (name, price, variants)
+      `)
       .eq('user_id', user.id);
       
     if (cartData) {
-      const formattedCart = cartData.map((item: any) => ({
-        id: item.id,
-        name: item.products?.name || "Unknown Product",
-        price: item.products?.price || 0,
-        qty: item.quantity
-      }));
+      const formattedCart = cartData.map((item: any) => {
+        // Find the correct price: prioritize variant price, fallback to base price
+        const itemPrice = item.products?.variants?.[0]?.price || item.products?.price || 0;
+        
+        return {
+          id: item.id,
+          name: item.products?.name || "Unknown Product",
+          price: itemPrice,
+          qty: item.quantity
+        };
+      });
       setCartItems(formattedCart);
     }
 
-    // Fetched order_items too so receipt has the details!
     const { data: ordersData } = await supabase
       .from('orders')
       .select('*, order_items(*)') 
@@ -102,13 +112,13 @@ export default function MemberLedger() {
 
   const openTracking = (order: any) => {
     setSelectedOrder(order);
-    setIsReceiptMode(false); // Show timeline by default for active orders
+    setIsReceiptMode(false); 
     setShowDrawer(true);
   };
 
   const openReceipt = (order: any) => {
     setSelectedOrder(order);
-    setIsReceiptMode(true); // Show receipt directly for past orders
+    setIsReceiptMode(true); 
     setShowDrawer(true);
   };
 
@@ -314,7 +324,6 @@ export default function MemberLedger() {
                     {pastOrders.map((order) => (
                       <div key={order.id} className="bg-white/40 p-5 flex flex-col sm:flex-row justify-between items-center border border-botanical-green/5 group hover:bg-white transition-all mb-4">
                         <div className="flex items-center gap-4 w-full sm:w-auto"><Package size={16} className="text-botanical-green/30" /><div><p className="text-[10px] font-bold text-botanical-green/60">{order.order_number} — {new Date(order.created_at).toLocaleDateString()}</p><p className="text-xs text-botanical-green font-serif">Settlement: ₦{order.total_amount.toLocaleString()}</p></div></div>
-                        {/* CHANGED to openReceipt logic */}
                         <button onClick={() => openReceipt(order)} className="mt-4 sm:mt-0 flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold bg-botanical-green/5 hover:bg-botanical-green hover:text-white px-5 py-2.5 rounded-full transition-all w-full sm:w-auto justify-center"><RefreshCw size={12} /> View Receipt</button>
                       </div>
                     ))}

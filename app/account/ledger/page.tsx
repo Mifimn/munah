@@ -59,12 +59,13 @@ export default function MemberLedger() {
       }
     }
 
-    // FIXED: Now fetching variants so we can calculate the correct size price
+    // FIXED: Fetch cart items AND the new variant_size column
     const { data: cartData } = await supabase
       .from('cart_items')
       .select(`
         id, 
         quantity, 
+        variant_size, 
         product_id, 
         products (name, price, variants)
       `)
@@ -72,13 +73,23 @@ export default function MemberLedger() {
       
     if (cartData) {
       const formattedCart = cartData.map((item: any) => {
-        // Find the correct price: prioritize variant price, fallback to base price
-        const itemPrice = item.products?.variants?.[0]?.price || item.products?.price || 0;
-        
+        let itemPrice = item.products?.price || 0;
+
+        // MATCH THE SAVED SIZE TO THE VARIANT PRICE
+        if (item.variant_size && item.products?.variants) {
+          const matchedVariant = item.products.variants.find(
+            (v: any) => v.size === item.variant_size
+          );
+          if (matchedVariant) {
+            itemPrice = parseFloat(matchedVariant.price);
+          }
+        }
+
         return {
           id: item.id,
           name: item.products?.name || "Unknown Product",
-          price: itemPrice,
+          size: item.variant_size || "Standard", 
+          price: itemPrice, 
           qty: item.quantity
         };
       });
@@ -287,6 +298,8 @@ export default function MemberLedger() {
                         <div className="w-16 h-16 bg-botanical-green/5 rounded-sm flex items-center justify-center shrink-0"><ShoppingBag size={20} className="text-botanical-green/30" /></div>
                         <div>
                           <h3 className="font-serif text-xl md:text-2xl text-botanical-green">{item.name}</h3>
+                          {/* SHOWING THE SIZE TO THE CUSTOMER */}
+                          <p className="text-[10px] text-botanical-green/60 uppercase tracking-widest mt-1">Size: {item.size}</p>
                           <p className="text-[10px] text-botanical-green/40 uppercase tracking-[0.2em] mt-1">Qty: {item.qty}</p>
                         </div>
                       </div>
@@ -320,7 +333,6 @@ export default function MemberLedger() {
                   </div>
                   <div>
                     <h2 className="text-[10px] uppercase tracking-[0.3em] text-botanical-green/40 mb-6 font-bold">Botanical History</h2>
-                    {pastOrders.length === 0 && <p className="text-xs text-botanical-green/40 italic">No past orders found.</p>}
                     {pastOrders.map((order) => (
                       <div key={order.id} className="bg-white/40 p-5 flex flex-col sm:flex-row justify-between items-center border border-botanical-green/5 group hover:bg-white transition-all mb-4">
                         <div className="flex items-center gap-4 w-full sm:w-auto"><Package size={16} className="text-botanical-green/30" /><div><p className="text-[10px] font-bold text-botanical-green/60">{order.order_number} — {new Date(order.created_at).toLocaleDateString()}</p><p className="text-xs text-botanical-green font-serif">Settlement: ₦{order.total_amount.toLocaleString()}</p></div></div>

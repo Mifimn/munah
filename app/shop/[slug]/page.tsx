@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase"; 
 
 export default function ProductDetails({ params }: { params: Promise<{ slug: string }> }) {
-  // UNWRAP PARAMS HERE FOR NEXT.JS 15+
   const { slug } = use(params);
 
   const [product, setProduct] = useState<any>(null);
@@ -27,7 +26,6 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
     async function fetchProduct() {
       setIsLoading(true);
       
-      // 1. Fetch current product based on the unwrapped SLUG
       const { data: currentProduct } = await supabase
         .from('products')
         .select('*')
@@ -37,15 +35,12 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
       if (currentProduct) {
         setProduct(currentProduct);
 
-        // 2. Set the initial variant/size to the first one in the JSON array
         if (currentProduct.variants && currentProduct.variants.length > 0) {
           setSelectedVariant(currentProduct.variants[0]);
         } else {
-          // Fallback for older products before variants were added
           setSelectedVariant({ size: currentProduct.volume || 'Standard Size', price: currentProduct.price });
         }
 
-        // 3. Fetch related products from the same category (MAX 4)
         const { data: related } = await supabase
           .from('products')
           .select('*')
@@ -62,7 +57,7 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
     fetchProduct();
   }, [slug]);
 
-  // --- FIXED: Smart Add to Cart Logic ---
+  // --- FIXED: Smart Add to Cart Logic with Variants ---
   const handleAddToCart = async () => {
     setIsAdding(true);
     const { data: { user } } = await supabase.auth.getUser();
@@ -72,16 +67,19 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
       return;
     }
 
-    // 1. Check if this product is already in their cart
+    const currentSize = selectedVariant?.size || 'Standard';
+
+    // 1. Check if this EXACT product + EXACT size is already in their cart
     const { data: existingCartItem } = await supabase
       .from('cart_items')
       .select('id, quantity')
       .eq('user_id', user.id)
       .eq('product_id', product.id)
-      .maybeSingle(); // maybeSingle prevents crash if it doesn't exist yet
+      .eq('variant_size', currentSize) // CRITICAL: Match the size!
+      .maybeSingle();
 
     if (existingCartItem) {
-      // 2. If it exists, UPDATE it by adding the new quantity to the old quantity
+      // 2. If exact size exists, UPDATE quantity
       const { error } = await supabase
         .from('cart_items')
         .update({ 
@@ -91,15 +89,14 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
 
       if (!error) router.push("/account/ledger");
     } else {
-      // 3. If it does not exist, INSERT a brand new row with the quantity
+      // 3. If it does not exist, INSERT new row WITH the size
       const { error } = await supabase
         .from('cart_items')
         .insert({
           user_id: user.id,
           product_id: product.id,
           quantity: quantity,
-          // NOTE: If you added a variant_size column to your DB, uncomment the line below!
-          // variant_size: selectedVariant?.size || 'Standard'
+          variant_size: currentSize // Saves the selected size!
         });
 
       if (!error) router.push("/account/ledger");
@@ -112,7 +109,6 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
     setActiveSection(activeSection === section ? null : section);
   };
 
-  // Loading Screen
   if (isLoading) {
     return (
       <main className="min-h-screen bg-earth-silk flex items-center justify-center">
@@ -121,7 +117,6 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
     );
   }
 
-  // Not Found State
   if (!product) {
     return (
       <main className="min-h-screen bg-earth-silk flex flex-col items-center justify-center pt-32 pb-32">
@@ -131,11 +126,9 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
     );
   }
 
-  // Calculate final price based on dynamically selected variant
   const currentUnitPrice = selectedVariant ? parseFloat(selectedVariant.price) : product.price;
   const totalPrice = currentUnitPrice * quantity;
 
-  // Determine what list to map for the size buttons
   const availableVariants = product.variants && product.variants.length > 0 
     ? product.variants 
     : [selectedVariant];
@@ -143,7 +136,6 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
   return (
     <main className="min-h-screen bg-earth-silk pb-32">
 
-      {/* 1. TOP EDITORIAL HEADER */}
       <div className="w-full pt-28 pb-6 px-6 sm:px-12 max-w-[1600px] mx-auto border-b border-botanical-green/10 mb-8 sm:mb-12">
         <motion.h2 
           initial={{ opacity: 0, y: -10 }}
@@ -165,10 +157,8 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
         </div>
       </div>
 
-      {/* 2. COMPLEX LAYOUT */}
       <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 items-start gap-12 lg:gap-0">
 
-        {/* Left Column: Sticky Image */}
         <div className="lg:sticky lg:top-32 p-6 sm:p-12 lg:pr-24 flex justify-center lg:justify-end">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
@@ -185,7 +175,6 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
           </motion.div>
         </div>
 
-        {/* Right Column: Scrolling Details */}
         <div className="p-6 sm:p-12 lg:pl-0 lg:pr-24 lg:py-0 flex flex-col justify-center">
 
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}>
@@ -204,7 +193,6 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
               {product.description || "Clinically formulated botanical extract designed for peak vitality."}
             </p>
 
-            {/* --- DYNAMIC SIZE/VARIANT SELECTION --- */}
             <div className="mb-10">
               <label className="text-[10px] uppercase tracking-widest text-botanical-green/60 font-bold flex items-center gap-2 mb-4">
                 <Droplet size={14} /> Select Volume / Size
@@ -226,7 +214,6 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
               </div>
             </div>
 
-            {/* Premium Cart Actions */}
             <div className="flex flex-col sm:flex-row gap-4 mb-16 border-t border-botanical-green/10 pt-10">
               <div className="flex items-center justify-between border border-botanical-green/30 rounded-full px-6 py-4 w-full sm:w-48 bg-transparent">
                 <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="text-botanical-green/50 hover:text-botanical-green transition-colors">
@@ -250,7 +237,6 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
               </motion.button>
             </div>
 
-            {/* Animated Accordions */}
             <div className="border-t border-botanical-green/10">
               <div className="border-b border-botanical-green/10">
                 <button 
@@ -306,7 +292,6 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
             </div>
           </motion.div>
 
-          {/* Testimonial block */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -327,7 +312,6 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
         </div>
       </div>
 
-      {/* 3. RELATED PRODUCTS SECTION */}
       {relatedProducts.length > 0 && (
         <section className="w-full pt-32 px-6 sm:px-12 max-w-[1600px] mx-auto border-t border-botanical-green/10 mt-12">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12 gap-6">

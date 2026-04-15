@@ -1,141 +1,93 @@
-import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
-import "./globals.css";
-import Sidebar from "./components/Sidebar";
-import ConsultationToggle from "./components/ConsultationToggle";
-import Footer from "./components/Footer";
-import AnnouncementBar from "./components/AnnouncementBar";
+"use client";
 
-// Configure Inter for clean, clinical sans-serif text (UI/Body)
-const inter = Inter({ 
-  subsets: ["latin"], 
-  variable: "--font-inter",
-  display: 'swap',
-});
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, ArrowRight, MessageCircleHeart } from "lucide-react";
 
-// Configure Playfair Display for elegant, apothecary serif (Headings/Italics)
-const playfair = Playfair_Display({ 
-  subsets: ["latin"], 
-  variable: "--font-playfair",
-  display: 'swap',
-});
+export default function AnnouncementBar() {
+  const [isVisible, setIsVisible] = useState(false);
 
-// --- ADVANCED HYBRID SEO: APOTHECARY BRAND + CORE PRODUCTS ---
-export const metadata: Metadata = {
-  metadataBase: new URL("https://naturalcureherbalmedicine.com"),
-  title: {
-    // Branding as a Clinical Apothecary while highlighting the Honey & Milk for Search
-    default: "Natural Cure | Clinical Apothecary, Original Honey & Camel Milk",
-    template: "%s | naturalcureherbalmedicine",
-  },
-  description: "Nigeria's premier clinical apothecary specializing in hand-formulated remedies, 10p Wild Honey, and Undiluted Camel Milk. Curated by Modina Olagunju.",
-  keywords: [
-    "Original Honey Nigeria",
-    "Undiluted Camel Milk Nigeria",
-    "Raw Camel Milk",
-    "Pure Wild Honey",
-    "Modina Olagunju",
-    "herbal medicine Nigeria",
-    "botanical remedies",
-    "natural apothecary",
-    "ancestral healing",
-    "clinical herbalism",
-    "natural cures",
-    "Mifimn",
-    "Musa Ayoola Shittu"
-  ],
-  authors: [{ name: "Modina Olagunju", url: "https://naturalcureherbalmedicine.com" }],
-  creator: "Shittu Musa Ayoola (Mifimn)",
-  publisher: "Natural Cure Herbal Medicine",
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  // SETS FAVICON USING YOUR LOGO
-  icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
-  },
+  useEffect(() => {
+    // Check if the user already closed the ad during this session
+    const isClosed = sessionStorage.getItem("whatsappPromoClosed");
+    
+    // If they haven't closed it, show it after 5 seconds
+    if (!isClosed) {
+      const timer = setTimeout(() => {
+        setIsVisible(true);
+      }, 5000); 
 
-  // Open Graph (Social Media Sharing)
-  openGraph: {
-    title: "naturalcureherbalmedicine | Clinical Apothecary & Superfoods",
-    description: "Sourced from the wild, delivered with clinical purity. Explore our original honey, camel milk, and hand-formulated botanical archives.",
-    url: "https://naturalcureherbalmedicine.com",
-    siteName: "Natural Cure Herbal Medicine", 
-    images: [
-      {
-        url: "/og-image.jpg", 
-        width: 1200,
-        height: 630,
-        alt: "Natural Cure Original Honey and Camel Milk by Modina Olagunju",
-      },
-    ],
-    locale: "en_US",
-    type: "website",
-  },
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
-  twitter: {
-    card: "summary_large_image",
-    title: "Natural Cure | Original Honey & Camel Milk",
-    description: "Botanical science, Original Honey, and Undiluted Camel Milk by Modina Olagunju.",
-    images: ["/og-image.jpg"],
-    creator: "@naturalcureherbalmedicine",
-  },
-
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
-};
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  
-  // --- UPDATED JSON-LD: INCLUDES PRODUCT SPECIALTIES ---
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "Natural Cure Herbal Medicine",
-    "alternateName": [
-      "naturalcureherbalmedicine", 
-      "Natural Cure Apothecary", 
-      "Original Honey & Camel Milk Nigeria"
-    ],
-    "url": "https://naturalcureherbalmedicine.com/"
+  const handleClose = () => {
+    setIsVisible(false);
+    // Save to session storage so it doesn't annoy them on every page click
+    sessionStorage.setItem("whatsappPromoClosed", "true");
   };
 
   return (
-    <html lang="en" className="scroll-smooth">
-      <head>
-        {/* Injecting the Structured Data directly into the HTML Head */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-        />
-      </head>
-      <body 
-        className={`${inter.variable} ${playfair.variable} font-sans bg-earth-silk text-botanical-green antialiased min-h-screen flex flex-col`}
-      >
-        <AnnouncementBar />
-        <Sidebar />
-        <ConsultationToggle />
-        <main className="flex-grow relative">
-          {children}
-        </main>
-        <Footer />
-      </body>
-    </html>
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          exit={{ opacity: 0 }} 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-botanical-green/60 backdrop-blur-sm"
+        >
+          <motion.div 
+            initial={{ scale: 0.95, y: 20 }} 
+            animate={{ scale: 1, y: 0 }} 
+            exit={{ scale: 0.95, y: 20 }} 
+            className="bg-earth-silk border border-botanical-green/20 p-8 md:p-10 max-w-md w-full relative shadow-2xl rounded-sm overflow-hidden"
+          >
+            {/* Close Button */}
+            <button 
+              onClick={handleClose}
+              className="absolute top-4 right-4 text-botanical-green/40 hover:text-botanical-green transition-colors"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Background Decorative Icon */}
+            <div className="absolute -top-10 -right-10 text-botanical-green/5">
+              <MessageCircleHeart size={150} strokeWidth={1} />
+            </div>
+
+            <div className="relative z-10 text-center">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-botanical-green/50 mb-4 block">
+                Exclusive Invitation
+              </span>
+              
+              <h2 className="font-serif text-3xl text-botanical-green mb-4 leading-tight">
+                The Apothecary Community
+              </h2>
+              
+              <p className="text-sm text-botanical-green/70 mb-8 leading-relaxed">
+                Unlock exclusive healing recipes and daily ancestral food remedies. Join our private circle to get direct botanical wisdom from Modina.
+              </p>
+
+              <a 
+                href="https://chat.whatsapp.com/L6J7JfIVSqn4Yo3dlZSiO4?mode=gi_t" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                onClick={handleClose} // Closes modal when they click the link
+                className="w-full flex justify-center items-center gap-3 bg-botanical-green text-clinical-white py-4 rounded-full text-xs font-bold uppercase tracking-widest shadow-xl hover:bg-botanical-green/90 transition-all active:scale-[0.98]"
+              >
+                Join WhatsApp Circle <ArrowRight size={16} />
+              </a>
+              
+              <button 
+                onClick={handleClose}
+                className="mt-6 text-[10px] uppercase tracking-widest text-botanical-green/40 hover:text-botanical-green transition-colors font-bold"
+              >
+                No thanks, I'll explore later
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

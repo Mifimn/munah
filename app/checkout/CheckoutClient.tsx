@@ -6,7 +6,7 @@ import { ShieldCheck, Truck, ChevronRight, Globe, MapPin, Loader2, CheckCircle2,
 import { Country, State } from "country-state-city";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { usePaystackPayment } from "react-paystack"; // --- NEW IMPORT ---
+import { usePaystackPayment } from "react-paystack"; 
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -32,6 +32,7 @@ export default function CheckoutPage() {
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedState, setSelectedState] = useState("");
   const [shippingFee, setShippingFee] = useState(0);
+  const [isCalculatingShipping, setIsCalculatingShipping] = useState(false); // NEW STATE
 
   // --- CHECKOUT PROCESS STATE ---
   const [isProcessing, setIsProcessing] = useState(false);
@@ -52,11 +53,13 @@ export default function CheckoutPage() {
       setUser(user);
       setFormData(prev => ({ ...prev, email: user.email || "" }));
 
+      // FIXED: Fetching variant_size so we know what they picked!
       const { data: cartData } = await supabase
         .from('cart_items')
         .select(`
           id,
           quantity,
+          variant_size,
           product_id,
           products ( name, price, variants )
         `)
@@ -73,28 +76,34 @@ export default function CheckoutPage() {
 
   // --- DYNAMIC TOTALS & PAYSTACK FEE CALCULATION ---
   const subtotal = cartItems.reduce((acc, item) => {
-    const unitPrice = item.products.variants?.[0]?.price || item.products.price || 0;
+    let unitPrice = item.products?.price || 0;
+    
+    // MATCH THE SAVED SIZE TO THE VARIANT PRICE
+    if (item.variant_size && item.products?.variants) {
+      const matchedVariant = item.products.variants.find(
+        (v: any) => v.size === item.variant_size
+      );
+      if (matchedVariant) {
+        unitPrice = parseFloat(matchedVariant.price);
+      }
+    }
     return acc + (unitPrice * item.quantity);
   }, 0);
 
-  // Calculate Paystack precise gateway fee so Modina gets exact amount
   const calculatePaystackFee = (baseAmount: number, isInternational: boolean) => {
     if (baseAmount === 0) return 0;
     let fee = 0;
     if (isInternational) {
-      // Int. Rate: 3.9% + NGN 100
       fee = ((baseAmount + 100) / 0.961) - baseAmount;
     } else {
-      // Local Rate: 1.5% + NGN 100 (Waived if under 2500)
       if (baseAmount < 2500) {
         fee = (baseAmount / 0.985) - baseAmount;
       } else {
         fee = ((baseAmount + 100) / 0.985) - baseAmount;
       }
-      // Local fee cap is NGN 2000
       if (fee > 2000) fee = 2000;
     }
-    return Math.ceil(fee); // Round up to nearest Naira
+    return Math.ceil(fee); 
   };
 
   const isIntl = selectedCountry !== "NG" && selectedCountry !== "";
@@ -104,9 +113,9 @@ export default function CheckoutPage() {
 
   // --- PAYSTACK CONFIGURATION ---
   const config = {
-    reference: `NCHM-${new Date().getTime().toString()}`, // Unique Order Number
+    reference: `NCHM-${new Date().getTime().toString()}`, 
     email: formData.email,
-    amount: finalTotalSettlement * 100, // Paystack requires amount in Kobo
+    amount: finalTotalSettlement * 100, 
     publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY as string,
     metadata: {
       custom_fields: [
@@ -138,41 +147,70 @@ export default function CheckoutPage() {
     setSelectedState(""); 
     
     if (code !== "NG" && code !== "") {
-      setShippingFee(45000); // Fez International DHL Rate
+      setShippingFee(45000); // Fez International Rate Fallback
     } else {
       setShippingFee(0);
     }
   };
 
-  const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  // --- FIXED: HYBRID SHIPPING LOGIC (Fez API + Supabase Fallback) ---
+  const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const stateName = e.target.value;
     setSelectedState(stateName);
 
     if (selectedCountry === "NG") {
-      if (stateName === "Kwara") {
-        setShippingFee(2000); 
-      } else if (["Lagos", "Oyo", "Ogun", "Osun"].includes(stateName)) {
-        setShippingFee(4500); 
-      } else if (["Federal Capital Territory", "Kano", "Kaduna"].includes(stateName)) {
-        setShippingFee(6000); 
-      } else {
-        setShippingFee(5000); 
+      setIsCalculatingShipping(true);
+      
+      try {
+        // 1. ATTEMPT LIVE FEZ API FIRST
+        const response = await fetch('/api/shipping', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ state: stateName, city: formData.city || stateName })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.fee) {
+          setShippingFee(data.fee); // Use Live Rate!
+        } else {
+          throw new Error("Live rate failed, triggering fallback.");
+        }
+        
+      } catch (err) {
+        // 2. FALLBACK TO SUPABASE DATABASE IF FEZ FAILS
+        console.warn("Using Supabase Database Fallback for Shipping");
+        
+        const { data: dbZone } = await supabase
+          .from('shipping_zones')
+          .select('fee')
+          .contains('states', [stateName])
+          .eq('status', 'Active')
+          .maybeSingle();
+          
+        if (dbZone) {
+          setShippingFee(dbZone.fee);
+        } else {
+          setShippingFee(5000); // Ultimate safety net
+        }
+      } finally {
+        setIsCalculatingShipping(false);
       }
     }
   };
 
   // --- SUCCESSFUL PAYMENT HANDLER ---
   const onSuccess = async (reference: any) => {
-    setIsProcessing(true); // Show loader while saving to DB
+    setIsProcessing(true); 
 
     try {
       // 1. Insert Main Order Record
       const { data: orderRecord, error: orderError } = await supabase
         .from('orders')
         .insert({
-          order_number: reference.reference, // Matches Paystack Ref exactly
-          payment_reference: reference.reference, // Saved for webhook tracking
-          payment_status: 'paid', // Marked as paid instantly
+          order_number: reference.reference, 
+          payment_reference: reference.reference, 
+          payment_status: 'paid', 
           customer_name: `${formData.firstName} ${formData.lastName}`,
           customer_email: formData.email,
           customer_phone: formData.phone,
@@ -189,13 +227,21 @@ export default function CheckoutPage() {
 
       if (orderError) throw orderError;
 
-      // 2. Format & Insert Order Items
-      const itemsToInsert = cartItems.map(item => ({
-        order_id: orderRecord.id,
-        product_name: item.products.name,
-        quantity: item.quantity,
-        unit_price: item.products.variants?.[0]?.price || item.products.price || 0
-      }));
+      // 2. Format & Insert Order Items (Saving exact sizes and prices!)
+      const itemsToInsert = cartItems.map(item => {
+        let unitPrice = item.products?.price || 0;
+        if (item.variant_size && item.products?.variants) {
+          const matchedVariant = item.products.variants.find((v: any) => v.size === item.variant_size);
+          if (matchedVariant) unitPrice = parseFloat(matchedVariant.price);
+        }
+
+        return {
+          order_id: orderRecord.id,
+          product_name: `${item.products.name} (${item.variant_size || 'Standard'})`, // Adds size to receipt!
+          quantity: item.quantity,
+          unit_price: unitPrice
+        };
+      });
 
       const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert);
       if (itemsError) throw itemsError;
@@ -203,7 +249,7 @@ export default function CheckoutPage() {
       // 3. Clear the Cart
       await supabase.from('cart_items').delete().eq('user_id', user.id);
 
-      // 4. Send Admin Alert Email (Running in background)
+      // 4. Send Admin Alert Email 
       fetch('/api/send-admin-alert', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -232,7 +278,6 @@ export default function CheckoutPage() {
   // --- CANCELED PAYMENT HANDLER ---
   const onClose = () => {
     setIsProcessing(false);
-    // You can add a small error/toast message here if you want
   };
 
   // --- SUBMIT BUTTON LOGIC ---
@@ -240,7 +285,6 @@ export default function CheckoutPage() {
     e.preventDefault();
     setError("");
 
-    // Validation
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.address || !formData.city || !selectedCountry || !selectedState) {
       setError("Please fill out all delivery and contact fields securely.");
       return;
@@ -250,11 +294,9 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Trigger the Paystack Pop-up
     setIsProcessing(true);
     initializePayment({ onSuccess, onClose });
   };
-
 
   if (isLoadingCart) {
     return <main className="min-h-screen bg-earth-silk flex justify-center items-center"><Loader2 size={40} className="animate-spin text-botanical-green/40" /></main>;
@@ -336,7 +378,7 @@ export default function CheckoutPage() {
             </p>
             <button 
               onClick={handleCheckoutClick}
-              disabled={isProcessing || cartItems.length === 0}
+              disabled={isProcessing || isCalculatingShipping || cartItems.length === 0}
               className="w-full flex justify-center items-center gap-3 bg-botanical-green text-clinical-white py-5 rounded-full text-xs font-bold uppercase tracking-widest shadow-xl hover:bg-botanical-green/90 transition-all active:scale-[0.98] disabled:opacity-50"
             >
               {isProcessing ? <Loader2 size={16} className="animate-spin" /> : null}
@@ -355,12 +397,19 @@ export default function CheckoutPage() {
                 <p className="text-sm text-botanical-green/50 font-light italic">Your ledger is empty.</p>
               ) : (
                 cartItems.map((item) => {
-                  const itemPrice = item.products.variants?.[0]?.price || item.products.price || 0;
+                  // Exactly match the size price for UI Display
+                  let itemPrice = item.products?.price || 0;
+                  if (item.variant_size && item.products?.variants) {
+                    const matchedVariant = item.products.variants.find((v: any) => v.size === item.variant_size);
+                    if (matchedVariant) itemPrice = parseFloat(matchedVariant.price);
+                  }
+
                   return (
                     <div key={item.id} className="flex justify-between items-center">
                       <div>
                         <p className="text-sm font-bold text-botanical-green">{item.products.name}</p>
-                        <p className="text-[10px] uppercase text-botanical-green/40">Quantity: {item.quantity < 10 ? `0${item.quantity}` : item.quantity}</p>
+                        <p className="text-[10px] uppercase text-botanical-green/40 mt-0.5">Size: {item.variant_size || 'Standard'}</p>
+                        <p className="text-[10px] uppercase text-botanical-green/40 mt-0.5">Quantity: {item.quantity < 10 ? `0${item.quantity}` : item.quantity}</p>
                       </div>
                       <p className="text-sm text-botanical-green">₦{(itemPrice * item.quantity).toLocaleString()}</p>
                     </div>
@@ -377,7 +426,13 @@ export default function CheckoutPage() {
               <div className="flex justify-between text-xs text-botanical-green/60">
                 <span className="flex items-center gap-2"><Truck size={14}/> Fez Logistics</span>
                 <span>
-                  {shippingFee === 0 && !selectedCountry ? "Calculated at checkout" : `₦${shippingFee.toLocaleString()}`}
+                  {isCalculatingShipping ? (
+                    <span className="flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Fetching Rate...</span>
+                  ) : shippingFee === 0 && !selectedCountry ? (
+                    "Calculated at checkout"
+                  ) : (
+                    `₦${shippingFee.toLocaleString()}`
+                  )}
                 </span>
               </div>
               <div className="flex justify-between text-xs text-botanical-green/60 border-b border-botanical-green/5 pb-4">

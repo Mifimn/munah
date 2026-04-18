@@ -2,65 +2,68 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { state, city, weight, name, email, phone, address } = await request.json();
+    // 1. Get what the customer typed on the checkout page
+    const { state, city, address, name, email, phone } = await request.json();
+    
     const SHIPBUBBLE_KEY = process.env.SHIPBUBBLE_API_KEY;
+    if (!SHIPBUBBLE_KEY) return NextResponse.json({ error: "API Key Missing" }, { status: 500 });
 
-    if (!SHIPBUBBLE_KEY) return NextResponse.json({ success: false, error: "Key Missing" }, { status: 500 });
-
-    // --- STEP 1: SILENTLY GET THE RECEIVER CODE ---
-    // This is the "secret fetch" you suggested!
-    const validateRes = await fetch("https://api.shipbubble.com/v1/shipping/address/validate", {
+    // --- STEP A: GET CODE FOR RECEIVER (The logic you suggested!) ---
+    const validateResponse = await fetch("https://api.shipbubble.com/v1/shipping/address/validate", {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SHIPBUBBLE_KEY}`
+        'Authorization': `Bearer ${SHIPBUBBLE_KEY}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        name: name || "Musa Shittu",
+        name: name || "Musa Shittu", 
         email: email || "customer@mifimn.com",
         phone: phone || "+2348000000000",
-        address: address ? `${address}, ${city || state}, ${state}, Nigeria` : `${city || state}, ${state}, Nigeria`
+        // We combine their street, city, and state into one string for Shipbubble
+        address: `${address || city}, ${city}, ${state}, Nigeria`
       })
     });
 
-    const validateData = await validateRes.json();
-    
-    // If validation fails, we can't get a price
-    if (!validateRes.ok || !validateData.data?.address_code) {
-      console.error("❌ Silent Validation Failed:", validateData);
+    const validateData = await validateResponse.json();
+
+    if (!validateResponse.ok || !validateData.data?.address_code) {
+      console.error("❌ Could not get Receiver Code:", validateData);
       return NextResponse.json({ success: false, error: "Address validation failed" }, { status: 400 });
     }
 
+    // Now we have the Receiver Code!
     const receiverCode = validateData.data.address_code;
-    console.log(`🚀 Step 1 Success: Receiver Code is ${receiverCode}`);
+    console.log(`✅ Receiver Code Generated: ${receiverCode}`);
 
-    // --- STEP 2: FETCH THE RATES USING THE CODES ---
-    const response = await fetch("https://api.shipbubble.com/v1/shipping/fetch_rates", {
+    // --- STEP B: CONNECT TO CHECKOUT & FETCH RATES ---
+    const rateResponse = await fetch("https://api.shipbubble.com/v1/shipping/fetch_rates", {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${SHIPBUBBLE_KEY}`
+        'Authorization': `Bearer ${SHIPBUBBLE_KEY}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        sender_address_code: 553667261, // Modina's permanent code
-        receiver_address_code: receiverCode, // The customer's new code
+        sender_address_code: 553667261, // Your Malete Sender Code
+        receiver_address_code: receiverCode, // The code we just generated above!
         packages: [{ weight: 2, length: 10, width: 10, height: 10 }]
       })
     });
 
-    const data = await response.json();
+    const rateData = await rateResponse.json();
 
-    if (!response.ok || data.status !== "success") {
-      return NextResponse.json({ success: false, error: data.message }, { status: 400 });
+    if (!rateResponse.ok || rateData.status !== "success") {
+      return NextResponse.json({ success: false, error: rateData.message }, { status: 400 });
     }
 
-    const rates = data.data?.rates || [];
+    // --- STEP C: SEND PRICE BACK TO FRONTEND ---
+    const rates = rateData.data?.rates || [];
     const fezRate = rates.find((c: any) => c.courier_name.toLowerCase().includes("fez"));
     const finalFee = fezRate ? fezRate.total : (rates.sort((a: any, b: any) => a.total - b.total)[0]?.total || 5000);
 
     return NextResponse.json({ success: true, fee: finalFee });
 
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    console.error("❌ Server Crash:", error.message);
+    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }

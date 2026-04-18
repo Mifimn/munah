@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const { state, city, weight } = await request.json();
-    console.log(`[BACKEND] Shipbubble Live Request: Kwara (Offa) to ${state} (${city || state})`);
+    console.log(`[BACKEND] Shipbubble Live Request: Dispatch to ${state} (${city || state})`);
 
     const SHIPBUBBLE_KEY = process.env.SHIPBUBBLE_API_KEY;
     if (!SHIPBUBBLE_KEY) {
@@ -15,10 +15,9 @@ export async function POST(request: Request) {
 
     // Shipbubble Payload
     const payload = {
-      sender_details: {
-        state: "Kwara",
-        city: "Offa" 
-      },
+      // ⚠️ IMPORTANT: Replace this exact string with your code from the Shipbubble Dashboard!
+      sender_address_code: "YOUR_SENDER_ADDRESS_CODE_HERE", 
+      
       receiver_details: {
         state: state,
         city: city || state
@@ -26,7 +25,7 @@ export async function POST(request: Request) {
       packages: [
         {
           weight: weight || 2,
-          length: 10, // Default dimensions required by most courier APIs
+          length: 10, // Standard default box size
           width: 10,
           height: 10
         }

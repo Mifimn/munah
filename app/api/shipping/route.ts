@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const today = new Date().toISOString().split('T')[0];
 
     const ratePayload = {
-      sender_address_code: 553667261, 
+      sender_address_code: 495645881, 
       reciever_address_code: receiverCode, // Shipbubble documentation spelling
       pickup_date: today,
       category_id: 99652979, // ✅ Your specific Health and Beauty ID

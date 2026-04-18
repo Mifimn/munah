@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Truck, ChevronRight, Globe, MapPin, Loader2, CheckCircle2, AlertCircle, CreditCard } from "lucide-react";
+import { ShieldCheck, Truck, ChevronRight, Globe, MapPin, Loader2, CheckCircle2, AlertCircle, CreditCard, Navigation } from "lucide-react";
 import { Country, State } from "country-state-city";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -33,6 +33,7 @@ export default function CheckoutPage() {
   const [selectedState, setSelectedState] = useState("");
   const [shippingFee, setShippingFee] = useState(0);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
 
   // --- CHECKOUT PROCESS STATE ---
   const [isProcessing, setIsProcessing] = useState(false);
@@ -140,9 +141,45 @@ export default function CheckoutPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // --- GPS AUTO-LOCATOR ---
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      return;
+    }
+    
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          // Free reverse geocoding API to turn coordinates into a street address
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await res.json();
+          
+          if (data && data.display_name) {
+            setFormData(prev => ({
+              ...prev,
+              address: data.display_name,
+              city: data.address?.city || data.address?.town || data.address?.state_district || ""
+            }));
+          }
+        } catch (err) {
+          console.error("Could not fetch address details", err);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        console.error("GPS Error:", error);
+        setError("Could not get your location. Please type it manually.");
+        setIsLocating(false);
+      }
+    );
+  };
+
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const code = e.target.value;
-    console.log(`🌍 Country Selected: ${code}`);
     setSelectedCountry(code);
     setAvailableStates(State.getStatesOfCountry(code));
     setSelectedState(""); 
@@ -154,7 +191,7 @@ export default function CheckoutPage() {
     }
   };
 
-  // --- UPDATED SHIPBUBBLE LOGIC WITH DUMMY FALLBACKS ---
+  // --- SHIPBUBBLE LIVE PRICING LOGIC ---
   const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const stateName = e.target.value;
     setSelectedState(stateName);
@@ -165,7 +202,6 @@ export default function CheckoutPage() {
       setIsCalculatingShipping(true);
       
       try {
-        // We bundle real form data or use "DUMMY" fallbacks if inputs are empty
         const payload = { 
           state: stateName, 
           city: formData.city || stateName,
@@ -175,8 +211,6 @@ export default function CheckoutPage() {
           address: formData.address || `${stateName} Central`
         };
 
-        console.log("📤 Sending payload to Shipbubble API:", payload);
-
         const response = await fetch('/api/shipping', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -184,11 +218,11 @@ export default function CheckoutPage() {
         });
         
         const data = await response.json();
-        console.log("📥 Received response:", data);
         
         if (data.success && data.fee) {
           console.log(`✅ Success! Live Rate applied: ₦${data.fee}`);
-          setShippingFee(data.fee); 
+          // Math.ceil rounds the price up so we don't show half-naira
+          setShippingFee(Math.ceil(data.fee)); 
         } else {
           throw new Error(data.error || "Live rate failed.");
         }
@@ -280,7 +314,19 @@ export default function CheckoutPage() {
             </div>
             
             <div className="space-y-6">
-              <input type="text" name="address" value={formData.address} onChange={handleInputChange} placeholder="Delivery Address" className="w-full bg-transparent border-b border-botanical-green/20 py-3 outline-none focus:border-botanical-green" />
+              {/* GPS AUTO-LOCATOR BUTTON ADDED HERE */}
+              <div className="relative">
+                <input type="text" name="address" value={formData.address} onChange={handleInputChange} placeholder="Delivery Address" className="w-full bg-transparent border-b border-botanical-green/20 py-3 outline-none focus:border-botanical-green pr-10" />
+                <button 
+                  onClick={handleGetLocation} 
+                  type="button"
+                  title="Use my current location"
+                  className="absolute right-0 top-3 text-botanical-green hover:opacity-70 transition-opacity"
+                >
+                  {isLocating ? <Loader2 size={20} className="animate-spin" /> : <Navigation size={20} />}
+                </button>
+              </div>
+
               <input type="text" name="city" value={formData.city} onChange={handleInputChange} placeholder="City" className="w-full bg-transparent border-b border-botanical-green/20 py-3 outline-none focus:border-botanical-green" />
               
               <div className="relative border-b border-botanical-green/20 py-1">

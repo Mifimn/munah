@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShieldCheck, Truck, ChevronRight, Globe, MapPin, Loader2, CheckCircle2, AlertCircle, CreditCard } from "lucide-react";
+import { ShieldCheck, Truck, ChevronRight, Globe, MapPin, Loader2, CheckCircle2, AlertCircle, CreditCard, Navigation } from "lucide-react";
 import { Country, State } from "country-state-city";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -11,10 +11,12 @@ import { usePaystackPayment } from "react-paystack";
 export default function CheckoutPage() {
   const router = useRouter();
   
+  // --- USER & CART STATE ---
   const [user, setUser] = useState<any>(null);
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [isLoadingCart, setIsLoadingCart] = useState(true);
   
+  // --- FORM STATE ---
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -24,23 +26,30 @@ export default function CheckoutPage() {
     city: ""
   });
   
+  // --- LOCATION & SHIPPING STATE ---
   const [countries, setCountries] = useState<any[]>([]);
   const [availableStates, setAvailableStates] = useState<any[]>([]);
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedState, setSelectedState] = useState("");
   const [shippingFee, setShippingFee] = useState(0);
   const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
 
+  // --- CHECKOUT PROCESS STATE ---
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  // 1. Initial Load
   useEffect(() => {
+    console.log("🌿 Natural Cure Checkout Initialized! Console is actively listening...");
+
     async function loadCheckoutData() {
       setCountries(Country.getAllCountries());
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        console.log("⚠️ No user found, redirecting to account page.");
         router.push("/account"); 
         return;
       }
@@ -60,6 +69,7 @@ export default function CheckoutPage() {
         .eq('user_id', user.id);
 
       if (cartData) {
+        console.log("🛒 Cart Data Loaded:", cartData);
         setCartItems(cartData);
       }
       setIsLoadingCart(false);
@@ -117,6 +127,7 @@ export default function CheckoutPage() {
   const paystackFee = calculatePaystackFee(baseTotal, isIntl);
   const finalTotalSettlement = baseTotal + paystackFee;
 
+  // --- PAYSTACK CONFIGURATION ---
   const config = {
     reference: `NCHM-${new Date().getTime().toString()}`, 
     email: formData.email,
@@ -144,6 +155,42 @@ export default function CheckoutPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // --- GPS AUTO-LOCATOR ---
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      return;
+    }
+    
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const data = await res.json();
+          
+          if (data && data.display_name) {
+            setFormData(prev => ({
+              ...prev,
+              address: data.display_name,
+              city: data.address?.city || data.address?.town || data.address?.state_district || ""
+            }));
+          }
+        } catch (err) {
+          console.error("Could not fetch address details", err);
+        } finally {
+          setIsLocating(false);
+        }
+      },
+      (error) => {
+        console.error("GPS Error:", error);
+        setError("Could not get your location. Please type it manually.");
+        setIsLocating(false);
+      }
+    );
+  };
+
   const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const code = e.target.value;
     setSelectedCountry(code);
@@ -157,9 +204,12 @@ export default function CheckoutPage() {
     }
   };
 
+  // --- DIRECT FEZ API LOGIC ---
   const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const stateName = e.target.value;
     setSelectedState(stateName);
+
+    console.log(`📍 State Selected: ${stateName}. Fetching Live Fez Rate...`);
 
     if (selectedCountry === "NG") {
       setIsCalculatingShipping(true);
@@ -184,6 +234,9 @@ export default function CheckoutPage() {
         const data = await response.json();
         
         if (data.success && data.fee) {
+          console.log(`📦 Calculated Package Weight: ${totalWeight}kg`);
+          console.log(`✅ FEZ SUCCESS! Live Rate applied: ₦${data.fee}`);
+          
           setShippingFee(Math.ceil(data.fee)); 
         } else {
           throw new Error(data.error || "Live rate failed.");
@@ -278,7 +331,19 @@ export default function CheckoutPage() {
             </div>
             
             <div className="space-y-6">
-              <input type="text" name="address" value={formData.address} onChange={handleInputChange} placeholder="Delivery Address" className="w-full bg-transparent border-b border-botanical-green/20 py-3 outline-none focus:border-botanical-green" />
+              {/* GPS AUTO-LOCATOR BUTTON */}
+              <div className="relative">
+                <input type="text" name="address" value={formData.address} onChange={handleInputChange} placeholder="Delivery Address" className="w-full bg-transparent border-b border-botanical-green/20 py-3 outline-none focus:border-botanical-green pr-10" />
+                <button 
+                  onClick={handleGetLocation} 
+                  type="button"
+                  title="Use my current location"
+                  className="absolute right-0 top-3 text-botanical-green hover:opacity-70 transition-opacity"
+                >
+                  {isLocating ? <Loader2 size={20} className="animate-spin" /> : <Navigation size={20} />}
+                </button>
+              </div>
+
               <input type="text" name="city" value={formData.city} onChange={handleInputChange} placeholder="City" className="w-full bg-transparent border-b border-botanical-green/20 py-3 outline-none focus:border-botanical-green" />
               
               <div className="relative border-b border-botanical-green/20 py-1">

@@ -11,16 +11,51 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "API Key Configuration Error" }, { status: 500 });
     }
 
+    // ==========================================
+    // STEP 1: SECRETLY VALIDATE CUSTOMER DESTINATION
+    // ==========================================
+    const validateUrl = "https://api.shipbubble.com/v1/shipping/address/validate";
+    
+    // We pass the State and City to get a valid destination code. 
+    // We use dummy data for the rest since we only need a pricing quote!
+    const validatePayload = {
+      name: "Modina Customer", 
+      email: "customer@modina.com",
+      phone: "+2348000000000",
+      address: `${city || state}, ${state}, Nigeria` 
+    };
+
+    console.log("[BACKEND] 🔄 Validating customer location...");
+    const validateRes = await fetch(validateUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SHIPBUBBLE_KEY}`
+      },
+      body: JSON.stringify(validatePayload)
+    });
+
+    const validateData = await validateRes.json();
+
+    if (!validateRes.ok || validateData.status !== "success") {
+      console.error("[BACKEND] ❌ Customer Validation Error:", validateData);
+      return NextResponse.json({ success: false, error: "Could not validate delivery location." }, { status: 400 });
+    }
+
+    // Grab the golden ticket for the destination!
+    const receiverCode = validateData.data.address_code;
+    console.log(`[BACKEND] ✅ Customer Location Validated! Receiver Code: ${receiverCode}`);
+
+
+    // ==========================================
+    // STEP 2: FETCH THE RATES
+    // ==========================================
     const URL = "https://api.shipbubble.com/v1/shipping/fetch_rates"; 
 
-    // Shipbubble Payload using your validated Address Code!
+    // We now pass BOTH the verified sender code and the newly generated receiver code
     const payload = {
       sender_address_code: 553667261, 
-      
-      receiver_details: {
-        state: state,
-        city: city || state
-      },
+      receiver_address_code: receiverCode, // Replaces receiver_details!
       packages: [
         {
           weight: weight || 2,
@@ -42,7 +77,6 @@ export async function POST(request: Request) {
 
     const data = await response.json();
 
-    // Catch Shipbubble routing errors
     if (!response.ok || data.status !== "success") {
       console.error("[BACKEND] ❌ Shipbubble Error Response:", data);
       return NextResponse.json({ 

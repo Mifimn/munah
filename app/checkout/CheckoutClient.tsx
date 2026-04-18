@@ -41,7 +41,6 @@ export default function CheckoutPage() {
 
   // 1. Initial Load
   useEffect(() => {
-    // --- BREADCRUMB 1: Initial Page Load ---
     console.log("🌿 Natural Cure Checkout Initialized! Console is actively listening...");
 
     async function loadCheckoutData() {
@@ -155,20 +154,28 @@ export default function CheckoutPage() {
     }
   };
 
-  // --- HYBRID SHIPPING LOGIC ---
+  // --- UPDATED SHIPBUBBLE LOGIC WITH DUMMY FALLBACKS ---
   const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const stateName = e.target.value;
     setSelectedState(stateName);
 
-    // --- BREADCRUMB 2: State Selection ---
-    console.log(`📍 State Selected: ${stateName}. Initializing Fez API Call...`);
+    console.log(`📍 State Selected: ${stateName}. Initializing Shipbubble API Call...`);
 
     if (selectedCountry === "NG") {
       setIsCalculatingShipping(true);
       
       try {
-        const payload = { state: stateName, city: formData.city || stateName };
-        console.log("📤 Sending payload to our Next.js API:", payload);
+        // We bundle real form data or use "DUMMY" fallbacks if inputs are empty
+        const payload = { 
+          state: stateName, 
+          city: formData.city || stateName,
+          name: `${formData.firstName} ${formData.lastName}`.trim() || "Modina Customer",
+          email: formData.email || "customer@modina.com",
+          phone: formData.phone || "+2348000000000",
+          address: formData.address || `${stateName} Central`
+        };
+
+        console.log("📤 Sending payload to Shipbubble API:", payload);
 
         const response = await fetch('/api/shipping', {
           method: 'POST',
@@ -177,22 +184,17 @@ export default function CheckoutPage() {
         });
         
         const data = await response.json();
-        
-        // --- BREADCRUMB 3: API Response ---
-        console.log("📥 Received response from our Next.js API:", data);
+        console.log("📥 Received response:", data);
         
         if (data.success && data.fee) {
-          console.log(`✅ Success! Live Fez Rate applied: ₦${data.fee}`);
+          console.log(`✅ Success! Live Rate applied: ₦${data.fee}`);
           setShippingFee(data.fee); 
         } else {
-          throw new Error(data.error || "Live rate failed, no fee returned.");
+          throw new Error(data.error || "Live rate failed.");
         }
         
       } catch (err) {
-        // --- BREADCRUMB 4: API Error ---
-        console.error("❌ Fez API Error Details:", err);
-        console.warn("🛡️ Using Supabase Database Fallback for Shipping");
-        
+        console.error("❌ API Error. Falling back to Database...");
         const { data: dbZone } = await supabase
           .from('shipping_zones')
           .select('fee')
@@ -201,10 +203,8 @@ export default function CheckoutPage() {
           .maybeSingle();
           
         if (dbZone) {
-          console.log(`✅ Database Fallback Success! Rate applied: ₦${dbZone.fee}`);
           setShippingFee(dbZone.fee);
         } else {
-          console.log("⚠️ Database Fallback not found. Using universal flat rate: ₦5000");
           setShippingFee(5000); 
         }
       } finally {
@@ -213,8 +213,7 @@ export default function CheckoutPage() {
     }
   };
 
-  // --- SUBMIT HANDLER (Unchanged) ---
-  const onSuccess = async (reference: any) => { /* ... */ };
+  const onSuccess = async (reference: any) => { /* Handle order creation in DB here */ };
   const onClose = () => { setIsProcessing(false); };
 
   const handleCheckoutClick = (e: React.FormEvent) => {
@@ -241,7 +240,6 @@ export default function CheckoutPage() {
   return (
     <main className="min-h-screen bg-earth-silk pt-32 pb-20 relative">
 
-      {/* SUCCESS MODAL */}
       <AnimatePresence>
         {success && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-botanical-green/40 backdrop-blur-md">
@@ -249,7 +247,7 @@ export default function CheckoutPage() {
               <CheckCircle2 size={64} className="text-botanical-green mx-auto mb-6" />
               <h2 className="font-serif text-3xl text-botanical-green mb-4">Payment Secured</h2>
               <p className="text-sm text-botanical-green/60 mb-8 leading-relaxed">
-                Your remedies are being prepared by the apothecary. We are redirecting you to your ledger...
+                Your remedies are being prepared by the apothecary...
               </p>
             </motion.div>
           </motion.div>
@@ -258,7 +256,6 @@ export default function CheckoutPage() {
 
       <div className="max-w-[1400px] mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-16">
         
-        {/* Left: Shipping & Secure Payment */}
         <div className="lg:col-span-7">
           <div className="flex items-center gap-3 text-botanical-green/40 mb-8">
             <span className="text-xs font-bold uppercase tracking-widest">Checkout</span>
@@ -309,9 +306,6 @@ export default function CheckoutPage() {
               <ShieldCheck size={20} />
               <h3 className="font-serif text-xl">Encrypted Settlement</h3>
             </div>
-            <p className="text-xs text-botanical-green/50 mb-8 leading-relaxed">
-              Your transaction is secured by clinical-grade encryption protocol via Paystack.
-            </p>
             <button 
               onClick={handleCheckoutClick}
               disabled={isProcessing || isCalculatingShipping || cartItems.length === 0}
@@ -323,34 +317,20 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Right: Order Summary */}
         <div className="lg:col-span-5">
           <div className="lg:sticky lg:top-32 bg-clinical-white p-8 border border-botanical-green/10 shadow-sm">
             <h3 className="font-serif text-2xl text-botanical-green mb-8">Summary</h3>
             
             <div className="space-y-6 border-b border-botanical-green/10 pb-8 mb-8 max-h-[300px] overflow-y-auto pr-2">
-              {cartItems.length === 0 ? (
-                <p className="text-sm text-botanical-green/50 font-light italic">Your ledger is empty.</p>
-              ) : (
-                cartItems.map((item) => {
-                  let itemPrice = item.products?.price || 0;
-                  if (item.variant_size && item.products?.variants) {
-                    const matchedVariant = item.products.variants.find((v: any) => v.size === item.variant_size);
-                    if (matchedVariant) itemPrice = parseFloat(matchedVariant.price);
-                  }
-
-                  return (
-                    <div key={item.id} className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm font-bold text-botanical-green">{item.products.name}</p>
-                        <p className="text-[10px] uppercase text-botanical-green/40 mt-0.5">Size: {item.variant_size || 'Standard'}</p>
-                        <p className="text-[10px] uppercase text-botanical-green/40 mt-0.5">Quantity: {item.quantity < 10 ? `0${item.quantity}` : item.quantity}</p>
-                      </div>
-                      <p className="text-sm text-botanical-green">₦{(itemPrice * item.quantity).toLocaleString()}</p>
-                    </div>
-                  );
-                })
-              )}
+              {cartItems.map((item) => (
+                <div key={item.id} className="flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-bold text-botanical-green">{item.products.name}</p>
+                    <p className="text-[10px] uppercase text-botanical-green/40 mt-0.5">Size: {item.variant_size || 'Standard'}</p>
+                  </div>
+                  <p className="text-sm text-botanical-green">₦{((item.products?.price || 0) * item.quantity).toLocaleString()}</p>
+                </div>
+              ))}
             </div>
 
             <div className="space-y-4">
@@ -359,12 +339,10 @@ export default function CheckoutPage() {
                 <span>₦{subtotal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-xs text-botanical-green/60">
-                <span className="flex items-center gap-2"><Truck size={14}/> Fez Logistics</span>
+                <span className="flex items-center gap-2"><Truck size={14}/> Logistics Fee</span>
                 <span>
                   {isCalculatingShipping ? (
                     <span className="flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Fetching Rate...</span>
-                  ) : shippingFee === 0 && !selectedCountry ? (
-                    "Calculated at checkout"
                   ) : (
                     `₦${shippingFee.toLocaleString()}`
                   )}

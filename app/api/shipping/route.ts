@@ -13,17 +13,10 @@ export async function POST(request: Request) {
 
     const URL = "https://api.shipbubble.com/v1/shipping/fetch_rates"; 
 
-    // Using the exact details from your screenshot to bypass the missing "code"
+    // Shipbubble Payload using your validated Address Code!
     const payload = {
-      sender_details: {
-        name: "mifimn shittu",
-        email: "shittumifimn0807@gmail.com",
-        phone: "+2348023169274",
-        address: "PF68+946, Malete 241104", 
-        city: "Malete",
-        state: "Kwara",
-        country: "Nigeria"
-      },
+      sender_address_code: 553667261, 
+      
       receiver_details: {
         state: state,
         city: city || state
@@ -31,7 +24,7 @@ export async function POST(request: Request) {
       packages: [
         {
           weight: weight || 2,
-          length: 10, // Standard default box size
+          length: 10, 
           width: 10,
           height: 10
         }

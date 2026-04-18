@@ -31,18 +31,18 @@ export async function POST(request: Request) {
 
     const receiverCode = validateData.data.address_code;
 
-    // --- STEP 2: FETCH RATES (Documentation Compliant) ---
+    // --- STEP 2: FETCH RATES (Using YOUR Category ID) ---
     const today = new Date().toISOString().split('T')[0];
 
     const ratePayload = {
       sender_address_code: 553667261, 
-      reciever_address_code: receiverCode, // Note the 'ie' spelling from Shipbubble docs
+      reciever_address_code: receiverCode, // Shipbubble documentation spelling
       pickup_date: today,
-      category_id: 3, // Category 3 = General Goods
+      category_id: 99652979, // ✅ Your specific Health and Beauty ID
       package_items: [
         {
-          name: "Natural Cure Remedy",
-          description: "Herbal Medicine",
+          name: "Herbal Remedy",
+          description: "Natural Medicine Product",
           unit_weight: "0.5",
           unit_amount: "5000",
           quantity: "1"
@@ -71,21 +71,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: rateData.message }, { status: 400 });
     }
 
-    // --- STEP 3: EXTRACT FEZ OR CHEAPEST ---
+    // --- STEP 3: EXTRACT PRICE ---
     const couriers = rateData.data?.couriers || [];
     
-    // Log all available prices to your terminal for debugging
-    console.log("📦 Available Rates:", couriers.map((c: any) => `${c.courier_name}: ₦${c.total}`));
+    // Log to terminal to see all options for debugging
+    console.log("📦 Rates Found:", couriers.map((c: any) => `${c.courier_name}: ₦${c.total}`));
 
     const fezRate = couriers.find((c: any) => c.courier_name.toLowerCase().includes("fez"));
     
-    // Use Fez if found, otherwise use the 'cheapest_courier' object from the API response
+    // Final logic: Use Fez, fallback to the 'cheapest_courier' object, then ₦5000
     const finalFee = fezRate ? fezRate.total : (rateData.data?.cheapest_courier?.total || 5000);
 
     return NextResponse.json({ success: true, fee: finalFee });
 
   } catch (error: any) {
-    console.error("❌ Server Crash:", error.message);
+    console.error("❌ Server Error:", error.message);
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }

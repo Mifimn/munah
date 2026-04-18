@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ArrowLeft, Save, UploadCloud, Plus, X, Leaf, FileText, 
-  Beaker, Activity, Droplets, Loader2, CheckCircle2, Trash2
+  ArrowLeft, Save, UploadCloud, Plus, X, FileText, 
+  Beaker, Activity, Droplets, Loader2, CheckCircle2 
 } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -14,7 +14,6 @@ export default function InventoryEditor() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- MODES & STATE ---
   const [editId, setEditId] = useState<string | null>(null);
   const [isPageLoading, setIsPageLoading] = useState(true);
   
@@ -26,7 +25,6 @@ export default function InventoryEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // --- BASE FORM DATA ---
   const [formData, setFormData] = useState({
     name: "",
     category: "",
@@ -36,25 +34,21 @@ export default function InventoryEditor() {
     image_url: "" as string | null,
   });
 
-  // --- NEW: THE VARIANT BUILDER (Multiple Sizes) ---
+  // Added weight_kg to the default state
   const [variants, setVariants] = useState([
-    { size: "", price: "", stock: "" }
+    { size: "", price: "", stock: "", weight_kg: "" }
   ]);
 
-  // --- INITIAL MOUNT & FETCH ---
   useEffect(() => {
     async function loadEditor() {
-      // 1. Fetch Categories
       const { data: catData } = await supabase.from('categories').select('name');
       if (catData) setCategories(catData.map(c => c.name));
 
-      // 2. Check if we are Editing (Look for ?id= in the URL)
       const urlParams = new URLSearchParams(window.location.search);
       const targetId = urlParams.get('id');
 
       if (targetId) {
         setEditId(targetId);
-        // Fetch existing product
         const { data: product } = await supabase.from('products').select('*').eq('id', targetId).single();
         
         if (product) {
@@ -67,15 +61,14 @@ export default function InventoryEditor() {
             image_url: product.image_url || null,
           });
 
-          // If they already have JSON variants saved, load them.
-          // Otherwise, convert their old single price/volume into a variant!
           if (product.variants && product.variants.length > 0) {
             setVariants(product.variants);
           } else {
             setVariants([{
               size: product.volume || "",
               price: product.price?.toString() || "",
-              stock: product.stock?.toString() || ""
+              stock: product.stock?.toString() || "",
+              weight_kg: ""
             }]);
           }
         }
@@ -86,7 +79,6 @@ export default function InventoryEditor() {
     loadEditor();
   }, []);
 
-  // --- HANDLERS ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -98,7 +90,7 @@ export default function InventoryEditor() {
   };
 
   const addVariant = () => {
-    setVariants([...variants, { size: "", price: "", stock: "" }]);
+    setVariants([...variants, { size: "", price: "", stock: "", weight_kg: "" }]);
   };
 
   const removeVariant = (index: number) => {
@@ -140,7 +132,6 @@ export default function InventoryEditor() {
   const handlePublish = async () => {
     setIsSaving(true);
 
-    // Calculate total stock and base price for the main columns
     const totalStock = variants.reduce((acc, v) => acc + (parseInt(v.stock) || 0), 0);
     const basePrice = parseFloat(variants[0].price) || 0;
     const baseVolume = variants[0].size || "";
@@ -152,9 +143,7 @@ export default function InventoryEditor() {
       ingredients: formData.ingredients,
       usage: formData.usage,
       image_url: formData.image_url,
-      // Save full variants JSON array
       variants: variants, 
-      // Keep old columns updated just in case older code relies on them
       price: basePrice,
       stock: totalStock,
       volume: baseVolume, 
@@ -163,10 +152,8 @@ export default function InventoryEditor() {
     let result;
 
     if (editId) {
-      // UPDATE EXISTING
       result = await supabase.from('products').update(payload).eq('id', editId);
     } else {
-      // INSERT NEW
       result = await supabase.from('products').insert([payload]);
     }
 
@@ -186,7 +173,6 @@ export default function InventoryEditor() {
   return (
     <main className="min-h-screen bg-earth-silk pb-20">
       
-      {/* --- SUCCESS MODAL --- */}
       <AnimatePresence>
         {showSuccess && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-botanical-green/40 backdrop-blur-md">
@@ -223,7 +209,6 @@ export default function InventoryEditor() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           
-          {/* LEFT SIDE: Image Upload & Variant Builder */}
           <div className="lg:col-span-4 space-y-8">
             <input type="file" ref={fileInputRef} onChange={handleImageUpload} hidden accept="image/*" />
             <div onClick={() => fileInputRef.current?.click()} className="w-full aspect-[4/5] bg-botanical-green/5 border-2 border-dashed border-botanical-green/20 rounded-sm flex flex-col items-center justify-center text-botanical-green/40 hover:bg-botanical-green/10 transition-all cursor-pointer group relative overflow-hidden">
@@ -234,7 +219,6 @@ export default function InventoryEditor() {
               )}
             </div>
 
-            {/* NEW MULTIPLE SIZES BUILDER */}
             <div className="bg-clinical-white p-6 border border-botanical-green/5 shadow-sm space-y-4">
               <div className="flex justify-between items-center mb-2">
                 <label className="text-[10px] uppercase tracking-widest text-botanical-green font-bold flex items-center gap-2"><Droplets size={12}/> Sizes & Prices</label>
@@ -257,12 +241,16 @@ export default function InventoryEditor() {
                       <input type="number" value={variant.stock} onChange={(e) => handleVariantChange(index, 'stock', e.target.value)} placeholder="50" className="w-full border-b border-botanical-green/20 py-2 outline-none bg-transparent font-sans text-botanical-green" />
                     </div>
                   </div>
+                  {/* NEW FIELD FOR WEIGHT */}
+                  <div className="mt-3">
+                    <p className="text-[9px] uppercase text-botanical-green/40 font-bold">Package Weight (KG)</p>
+                    <input type="number" step="0.1" value={variant.weight_kg || ""} onChange={(e) => handleVariantChange(index, 'weight_kg', e.target.value)} placeholder="e.g. 1.2" className="w-full border-b border-botanical-green/20 py-2 outline-none bg-transparent font-sans text-botanical-green" />
+                  </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* RIGHT SIDE: Details (Unchanged mostly) */}
           <div className="lg:col-span-8 space-y-8">
             <div className="bg-clinical-white p-8 sm:p-10 border border-botanical-green/5 shadow-sm space-y-10">
               

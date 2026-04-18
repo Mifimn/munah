@@ -5,49 +5,69 @@ export async function POST(request: Request) {
     // 1. Get destination and weight from your frontend checkout
     const { state, weight } = await request.json();
     
-    // 2. Fetch the exact key you saved in Vercel
-    const FEZ_API_KEY = process.env.FEZ_API_KEY;
+    // 2. Fetch the secure login details you saved in Vercel
+    const FEZ_USER_ID = process.env.FEZ_USER_ID;
+    const FEZ_PASSWORD = process.env.FEZ_PASSWORD;
 
-    if (!FEZ_API_KEY) {
-      console.error("❌ Fez API Key is missing from Environment Variables");
-      return NextResponse.json({ error: "Fez API Key Missing" }, { status: 500 });
+    if (!FEZ_USER_ID || !FEZ_PASSWORD) {
+      console.error("❌ Fez Credentials Missing in Vercel");
+      return NextResponse.json({ error: "Server Configuration Error" }, { status: 500 });
     }
 
+    // --- STEP 1: SILENT AUTHENTICATION (Get Fresh Keys) ---
+    // Note: If live fails, you can switch 'api.fezdelivery.co' to 'apisandbox.fezdelivery.co'
+    const authResponse = await fetch("https://api.fezdelivery.co/v1/user/authenticate", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: FEZ_USER_ID,
+        password: FEZ_PASSWORD
+      })
+    });
+
+    const authData = await authResponse.json();
+
+    if (authData.status !== "Success") {
+      console.error("❌ Fez Authentication Failed:", authData);
+      return NextResponse.json({ success: false, error: authData.description || "Auth Failed" }, { status: 401 });
+    }
+
+    // Extract the fresh keys from the response
+    const freshAuthToken = authData.authDetails.authToken;
+    const freshSecretKey = authData.orgDetails['secret-key'];
+
+    console.log(`[BACKEND] Auth Success! Fetching rate to ${state}...`);
+
+    // --- STEP 2: FETCH THE SHIPPING COST ---
     // Default to 0.5kg for light herbal medicine if frontend weight is missing
     const finalWeight = weight ? parseFloat(weight) : 0.5;
 
-    console.log(`[BACKEND] Fetching Fez direct rate from Lagos to ${state} for ${finalWeight}kg...`);
-
-    // 3. The Clean Fez Payload
-    const payload = {
+    const costPayload = {
       state: state,           // Customer's selected state
       pickUpState: "Lagos",   // Modina's warehouse state
-      weight: finalWeight,    // The dynamic weight
+      weight: finalWeight,    // The dynamic cart weight
       locker: false           // Standard doorstep delivery
     };
 
-    // 4. Fire the request directly to Fez
-    const response = await fetch("https://api.fezdelivery.co/v1/order/cost", {
+    const costResponse = await fetch("https://api.fezdelivery.co/v1/order/cost", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // We pass your single Vercel key into both required header slots
-        'Authorization': `Bearer ${FEZ_API_KEY}`,
-        'secret-key': FEZ_API_KEY
+        'Authorization': `Bearer ${freshAuthToken}`, // The fresh token
+        'secret-key': freshSecretKey                 // The fresh secret key
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(costPayload)
     });
 
-    const data = await response.json();
+    const costData = await costResponse.json();
 
-    // 5. Handle Fez's response
-    if (data.status !== "Success") {
-      console.error("❌ Fez API Error:", data);
-      return NextResponse.json({ success: false, error: data.description || "Failed to fetch Fez cost" }, { status: 400 });
+    if (costData.status !== "Success") {
+      console.error("❌ Fez Cost Error:", costData);
+      return NextResponse.json({ success: false, error: costData.description || "Failed to fetch cost" }, { status: 400 });
     }
 
     // Fez returns the final VAT-inclusive cost right here
-    const finalFee = data.totalCost;
+    const finalFee = costData.totalCost;
     console.log(`✅ Direct Fez Rate Applied: ₦${finalFee}`);
 
     return NextResponse.json({ success: true, fee: finalFee });

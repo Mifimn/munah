@@ -197,6 +197,7 @@ export default function CheckoutPage() {
     setAvailableStates(State.getStatesOfCountry(code));
     setSelectedState(""); 
     
+    // We set a temporary 45k fallback here, but handleStateChange will override it with the real API price
     if (code !== "NG" && code !== "") {
       setShippingFee(45000); 
     } else {
@@ -204,25 +205,27 @@ export default function CheckoutPage() {
     }
   };
 
-  // --- DIRECT FEZ API LOGIC ---
+  // --- DYNAMIC FEZ LOGISTICS ROUTER (LOCAL + INT'L) ---
   const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const stateName = e.target.value;
     setSelectedState(stateName);
 
-    console.log(`📍 State Selected: ${stateName}. Fetching Live Fez Rate...`);
+    console.log(`📍 Location Selected: ${stateName}, ${selectedCountry}. Fetching Live Fez Rate...`);
 
-    if (selectedCountry === "NG") {
+    // Removed the "NG" lock. It now fires for ALL countries!
+    if (selectedCountry && stateName) {
       setIsCalculatingShipping(true);
       
       try {
         const payload = { 
+          country: selectedCountry, // We now pass the exact country to the backend
           state: stateName, 
           city: formData.city || stateName,
           name: `${formData.firstName} ${formData.lastName}`.trim() || "Modina Customer",
           email: formData.email || "customer@modina.com",
           phone: formData.phone || "+2348000000000",
           address: formData.address || `${stateName} Central`,
-          weight: totalWeight // Passed to your Fez API
+          weight: totalWeight 
         };
 
         const response = await fetch('/api/shipping', {
@@ -244,19 +247,20 @@ export default function CheckoutPage() {
         
       } catch (err: any) {
         console.error("❌ THE EXACT SHIPPING ERROR IS:", err.message);
-        console.error("Falling back to Database...");
+        console.error("Falling back to Database / Flat Rate...");
         
-        const { data: dbZone } = await supabase
-          .from('shipping_zones')
-          .select('fee')
-          .contains('states', [stateName])
-          .eq('status', 'Active')
-          .maybeSingle();
-          
-        if (dbZone) {
-          setShippingFee(dbZone.fee);
+        // If it fails, fallback to Supabase for NG, or 45k for Int'l
+        if (selectedCountry === "NG") {
+          const { data: dbZone } = await supabase
+            .from('shipping_zones')
+            .select('fee')
+            .contains('states', [stateName])
+            .eq('status', 'Active')
+            .maybeSingle();
+            
+          setShippingFee(dbZone?.fee || 5000); 
         } else {
-          setShippingFee(5000); 
+          setShippingFee(45000); 
         }
       } finally {
         setIsCalculatingShipping(false);

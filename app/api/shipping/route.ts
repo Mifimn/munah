@@ -3,86 +3,81 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const { state, city, weight } = await request.json();
-    console.log(`[BACKEND] New Shipping Request: State=${state}, City=${city}`);
+    console.log(`[BACKEND] Shipbubble Live Request: Kwara (Offa) to ${state} (${city || state})`);
 
-    // Verify credentials exist
-    const userId = process.env.FEZ_USER_ID;
-    const password = process.env.FEZ_PASSWORD;
-
-    if (!userId || !password) {
-      console.error("[BACKEND] ❌ FEZ_USER_ID or FEZ_PASSWORD missing in .env.local!");
-      return NextResponse.json({ success: false, error: "Missing API Credentials" }, { status: 500 });
+    const SHIPBUBBLE_KEY = process.env.SHIPBUBBLE_API_KEY;
+    if (!SHIPBUBBLE_KEY) {
+      console.error("[BACKEND] ❌ Missing SHIPBUBBLE_API_KEY in .env.local");
+      return NextResponse.json({ success: false, error: "API Key Configuration Error" }, { status: 500 });
     }
 
-    // ==========================================
-    // STEP 1: AUTHENTICATE TO GET TOKENS
-    // ==========================================
-    console.log("[BACKEND] Step 1: Authenticating with Fez...");
-    
-    // Use api.fezdelivery.co for live, or apisandbox for test
-    const AUTH_URL = "https://api.fezdelivery.co/v1/user/authenticate"; 
-    
-    const authResponse = await fetch(AUTH_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: userId,
-        password: password
-      })
-    });
+    const URL = "https://api.shipbubble.com/v1/shipping/fetch_rates"; 
 
-    const authData = await authResponse.json();
-
-    if (!authResponse.ok || authData.status !== "Success") {
-      console.error("[BACKEND] ❌ Fez Auth Failed:", authData);
-      return NextResponse.json({ success: false, error: "Fez Authentication Failed" }, { status: 401 });
-    }
-
-    // Extract the temporary keys from Fez's response
-    const bearerToken = authData.authDetails.authToken;
-    const secretKey = authData.orgDetails["secret-key"];
-
-    console.log("[BACKEND] ✅ Auth Success! Keys acquired.");
-
-    // ==========================================
-    // STEP 2: FETCH SHIPPING RATES
-    // ==========================================
-    console.log("[BACKEND] Step 2: Fetching live rates...");
-    
-    const RATES_URL = "https://api.fezdelivery.co/v1/rates";
-    
-    const ratePayload = {
-      origin: "Lagos", // Ensure this matches Modina's dispatch state
-      destination_state: state,
-      destination_city: city || state,
-      weight: weight || 2, 
+    // Shipbubble Payload
+    const payload = {
+      sender_details: {
+        state: "Kwara",
+        city: "Offa" 
+      },
+      receiver_details: {
+        state: state,
+        city: city || state
+      },
+      packages: [
+        {
+          weight: weight || 2,
+          length: 10, // Default dimensions required by most courier APIs
+          width: 10,
+          height: 10
+        }
+      ]
     };
 
-    const rateResponse = await fetch(RATES_URL, {
+    const response = await fetch(URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${bearerToken}`, // Added the Bearer token
-        'secret-key': secretKey                   // Added the required secret-key header
+        'Authorization': `Bearer ${SHIPBUBBLE_KEY}` 
       },
-      body: JSON.stringify(ratePayload)
+      body: JSON.stringify(payload)
     });
 
-    const rateData = await rateResponse.json();
+    const data = await response.json();
 
-    if (!rateResponse.ok || rateData.status === "Error") {
-      console.error("[BACKEND] ❌ Rate Fetch Failed:", rateData);
+    // Catch Shipbubble routing errors
+    if (!response.ok || data.status !== "success") {
+      console.error("[BACKEND] ❌ Shipbubble Error Response:", data);
       return NextResponse.json({ 
         success: false, 
-        error: rateData.description || "Fez rejected the route." 
-      });
+        error: data.message || "Failed to fetch shipping rates." 
+      }, { status: 400 });
     }
 
-    console.log("[BACKEND] ✅ Live Fez Rate Success:", rateData);
-    return NextResponse.json({ success: true, fee: rateData.price }); 
+    const availableCouriers = data.data?.rates || [];
+    console.log("[BACKEND] 📦 Available Couriers:", availableCouriers.map((c: any) => `${c.courier_name} (₦${c.total})`));
+
+    if (availableCouriers.length === 0) {
+      return NextResponse.json({ success: false, error: "No couriers available for this route." });
+    }
+
+    // Attempt to find Fez specifically
+    const fezRate = availableCouriers.find((courier: any) => 
+      courier.courier_name.toLowerCase().includes("fez")
+    );
+
+    if (fezRate) {
+      console.log(`[BACKEND] ✅ Found Fez Delivery: ₦${fezRate.total}`);
+      return NextResponse.json({ success: true, fee: fezRate.total }); 
+    } 
+
+    // Fallback: If Fez isn't on the list, grab the cheapest available courier
+    const cheapestAlternative = availableCouriers.sort((a: any, b: any) => a.total - b.total)[0];
+    console.log(`[BACKEND] ⚠️ Fez unavailable. Using cheapest alternative (${cheapestAlternative.courier_name}): ₦${cheapestAlternative.total}`);
+    
+    return NextResponse.json({ success: true, fee: cheapestAlternative.total });
 
   } catch (error: any) {
     console.error("[BACKEND] ❌ Server Error:", error.message);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }

@@ -65,7 +65,7 @@ export default function AnnouncementBar() {
               </h2>
               
               <p className="text-sm text-botanical-green/70 mb-8 leading-relaxed">
-                Unlock exclusive healing recipes and daily ancestral food remedies. Join our private circle to get direct botanical wisdom from Modina.
+                Unlock exclusive healing recipes and daily ancestral food remedies. Join our private circle to get direct botanical wisdom from Modina Olagunju.
               </p>
 
               <a 

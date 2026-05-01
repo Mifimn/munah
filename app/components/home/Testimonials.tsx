@@ -4,22 +4,22 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star } from "lucide-react";
 
-// Mock Database of Reviews
+// Real Customer Reviews extracted from WhatsApp Feedback
 const reviews = [
   {
     id: 1,
-    quote: "This platform completely changed my approach to natural healing. The remedies are potent, and the guidance is incredibly professional.",
-    author: "Sarah Jenkins",
+    quote: "Thank you so much for the guidance and the natural remedies. The raisins are incredibly effective for memory support and brain health!",
+    author: "Ayinde",
   },
   {
     id: 2,
-    quote: "After years of fatigue, the Immunity Elixir restored my energy in just a week. You can literally feel the clinical purity in every drop.",
-    author: "Michael T.",
+    quote: "The products are so wonderful I made sure to leave a 5-star Google review. Alhamdulillah, I am so happy with the results.",
+    author: "Ummu Anas",
   },
   {
     id: 3,
-    quote: "Finally, an apothecary that relies on science rather than myths. The dosage rituals are clear, and the results speak for themselves.",
-    author: "Elena R.",
+    quote: "I am missing your products all the way over here in Malawi, especially the pure camel milk! We really need an agent here.",
+    author: "International Client (Malawi)",
   }
 ];
 
@@ -88,7 +88,7 @@ export default function Testimonials() {
                     {reviews[currentIndex].author}
                   </p>
                   <p className="text-clinical-white/50 text-xs sm:text-sm mt-1 uppercase tracking-widest">
-                    Verified Patient
+                    Verified WhatsApp Review
                   </p>
                 </div>
               </motion.div>
@@ -139,7 +139,7 @@ export default function Testimonials() {
                   {review.author}
                 </p>
                 <p className="text-clinical-white/40 text-xs mt-1.5 uppercase tracking-widest">
-                  Verified Patient
+                  Verified WhatsApp Review
                 </p>
               </div>
             </motion.div>

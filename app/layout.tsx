@@ -5,6 +5,7 @@ import Sidebar from "./components/Sidebar";
 import ConsultationToggle from "./components/ConsultationToggle";
 import Footer from "./components/Footer";
 import AnnouncementBar from "./components/AnnouncementBar";
+import EbookPromoModal from "./components/EbookPromoModal"; 
 
 // Configure Inter for clean, clinical sans-serif text (UI/Body)
 const inter = Inter({ 
@@ -66,7 +67,7 @@ export const metadata: Metadata = {
     siteName: "Natural Cure Herbal Medicine", 
     images: [
       {
-        url: "/og-image.jpg", 
+        url: "/og-img.png", // 👈 UPDATED FILENAME AND EXTENSION
         width: 1200,
         height: 630,
         alt: "Natural Cure Original Honey and Camel Milk by Modina Olagunju",
@@ -80,7 +81,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Natural Cure | Original Honey & Camel Milk",
     description: "Botanical science, Original Honey, and Undiluted Camel Milk by Modina Olagunju.",
-    images: ["/og-image.jpg"],
+    images: ["/og-img.png"], // 👈 UPDATED FILENAME AND EXTENSION
     creator: "@naturalcureherbalmedicine",
   },
 
@@ -129,6 +130,7 @@ export default function RootLayout({
         className={`${inter.variable} ${playfair.variable} font-sans bg-earth-silk text-botanical-green antialiased min-h-screen flex flex-col`}
       >
         <AnnouncementBar />
+        <EbookPromoModal />
         <Sidebar />
         <ConsultationToggle />
         <main className="flex-grow relative">

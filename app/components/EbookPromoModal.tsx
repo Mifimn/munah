@@ -10,30 +10,22 @@ export default function EbookPromoModal() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-
     const checkEligibility = async () => {
       // 1. Are they already logged in?
-      // (We still want to hide it if they are already a registered member!)
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) return; 
+      if (user) return; // If logged in, do nothing (WhatsApp modal will take over)
 
-      // 2. Start the 5-second timer
-      timer = setTimeout(() => {
-        setIsOpen(true);
-      }, 5000); 
+      // 2. Open instantly if they are a guest
+      setIsOpen(true);
     };
 
     checkEligibility();
-
-    // Cleanup the timer if they leave the page before 5 seconds
-    return () => clearTimeout(timer);
   }, []);
 
   const handleClose = () => {
     setIsOpen(false);
-    // I REMOVED the localStorage rule here! 
-    // Now it will completely forget they closed it.
+    // 👇 This sends a custom signal to the browser that the WhatsApp modal is waiting for!
+    window.dispatchEvent(new Event("ebookModalClosed"));
   };
 
   return (

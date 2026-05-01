@@ -3,28 +3,59 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowRight, MessageCircleHeart } from "lucide-react";
+import { supabase } from "@/lib/supabase"; 
 
 export default function AnnouncementBar() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Check if the user already closed the ad during this session
-    const isClosed = sessionStorage.getItem("whatsappPromoClosed");
-    
-    // If they haven't closed it, show it after 5 seconds
-    if (!isClosed) {
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, 5000); 
+    console.log("🟢 WhatsApp Modal Mounted: Checking rules...");
 
-      return () => clearTimeout(timer);
-    }
+    // 🚨 TEMPORARILY DISABLED FOR TESTING:
+    // const isClosed = sessionStorage.getItem("whatsappPromoClosed");
+    // if (isClosed) {
+    //   console.log("🛑 Browser says you already closed this! Aborting.");
+    //   return; 
+    // }
+
+    // 1. Listen for the eBook modal closing signal
+    const triggerWhatsAppModal = () => {
+      console.log("👂 Heard the eBook modal close! Opening WhatsApp modal...");
+      setIsVisible(true);
+    };
+    window.addEventListener("ebookModalClosed", triggerWhatsAppModal);
+
+    // 2. Check if they are ALREADY logged in
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        console.log("👤 User is logged in! Opening WhatsApp modal instantly...");
+        setIsVisible(true);
+      } else {
+        console.log("👻 User is a guest. Waiting for eBook modal to finish...");
+      }
+    };
+    checkUser();
+
+    // 3. Listen for login events
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        console.log("🔐 Just logged in! Opening WhatsApp modal...");
+        setIsVisible(true);
+      }
+    });
+
+    return () => {
+      window.removeEventListener("ebookModalClosed", triggerWhatsAppModal);
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const handleClose = () => {
+    console.log("❌ Closing WhatsApp Modal.");
     setIsVisible(false);
-    // Save to session storage so it doesn't annoy them on every page click
-    sessionStorage.setItem("whatsappPromoClosed", "true");
+    // 🚨 TEMPORARILY DISABLED FOR TESTING:
+    // sessionStorage.setItem("whatsappPromoClosed", "true");
   };
 
   return (
@@ -42,16 +73,14 @@ export default function AnnouncementBar() {
             exit={{ scale: 0.95, y: 20 }} 
             className="bg-earth-silk border border-botanical-green/20 p-8 md:p-10 max-w-md w-full relative shadow-2xl rounded-sm overflow-hidden"
           >
-            {/* Close Button */}
             <button 
               onClick={handleClose}
-              className="absolute top-4 right-4 text-botanical-green/40 hover:text-botanical-green transition-colors"
+              className="absolute top-4 right-4 z-20 text-botanical-green/40 hover:text-botanical-green transition-colors"
             >
               <X size={24} />
             </button>
 
-            {/* Background Decorative Icon */}
-            <div className="absolute -top-10 -right-10 text-botanical-green/5">
+            <div className="absolute -top-10 -right-10 text-botanical-green/5 z-0">
               <MessageCircleHeart size={150} strokeWidth={1} />
             </div>
 
@@ -72,7 +101,7 @@ export default function AnnouncementBar() {
                 href="https://chat.whatsapp.com/L6J7JfIVSqn4Yo3dlZSiO4?mode=gi_t" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                onClick={handleClose} // Closes modal when they click the link
+                onClick={handleClose} 
                 className="w-full flex justify-center items-center gap-3 bg-botanical-green text-clinical-white py-4 rounded-full text-xs font-bold uppercase tracking-widest shadow-xl hover:bg-botanical-green/90 transition-all active:scale-[0.98]"
               >
                 Join WhatsApp Circle <ArrowRight size={16} />

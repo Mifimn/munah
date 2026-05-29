@@ -62,13 +62,19 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Column 3: The Protocol (Single Contact) */}
+          {/* Column 3: The Protocol (Contact) */}
           <div className="lg:text-right">
             <p className="text-[9px] uppercase tracking-[0.3em] text-clinical-white/20 mb-6 font-bold">Primary Consultation</p>
-            <a href="https://wa.me/2348066004959" className="group inline-flex flex-col lg:items-end gap-1">
-              <span className="font-serif text-2xl group-hover:italic transition-all tracking-tight">+234 806 600 4959</span>
-              <span className="text-[9px] text-clinical-white/30 uppercase tracking-[0.2em]">Secure WhatsApp Line</span>
-            </a>
+            <div className="flex flex-col gap-6 lg:items-end">
+              <a href="https://wa.me/2348066004959" className="group inline-flex flex-col lg:items-end gap-1">
+                <span className="font-serif text-xl lg:text-2xl group-hover:italic transition-all tracking-tight">+234 806 600 4959</span>
+                <span className="text-[9px] text-clinical-white/30 uppercase tracking-[0.2em]">Secure WhatsApp Line</span>
+              </a>
+              <a href="tel:+2349039385761" className="group inline-flex flex-col lg:items-end gap-1">
+                <span className="font-serif text-xl lg:text-2xl group-hover:italic transition-all tracking-tight">+234 903 938 5761</span>
+                <span className="text-[9px] text-clinical-white/30 uppercase tracking-[0.2em]">Direct Voice Line</span>
+              </a>
+            </div>
           </div>
 
         </div>

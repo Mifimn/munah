@@ -87,7 +87,6 @@ export default function Sidebar() {
             className="pointer-events-auto"
           >
             <Link href="/" className="group flex items-center justify-center bg-botanical-green/10 backdrop-blur-md p-2 rounded-full border border-botanical-green/20 hover:bg-botanical-green transition-all duration-500">
-               {/* REPLACED LEAF ICON WITH IMAGE LOGO */}
                <Image 
                 src="/logo.png" 
                 alt="Natural Cure Logo" 
@@ -136,102 +135,124 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* --- SMART MOBILE SIDEBAR --- */}
+      {/* --- REDESIGNED SMART SIDEBAR (SLIDE-OUT DRAWER) --- */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-botanical-green flex flex-col overflow-hidden"
-          >
-            {/* Sidebar Top Header */}
-            <div className="flex justify-between items-center px-8 py-10 border-b border-clinical-white/10">
-              <div className="flex items-center gap-2 opacity-40">
-                {/* REPLACED LEAF ICON WITH IMAGE LOGO */}
-                <Image 
-                  src="/logo.png" 
-                  alt="Natural Cure Logo" 
-                  width={16} 
-                  height={16} 
-                  className="object-contain brightness-0 invert" 
-                />
-                <span className="text-[10px] uppercase tracking-widest text-clinical-white font-bold">Apothecary Index</span>
-              </div>
-              <button onClick={() => setIsOpen(false)} className="p-4 bg-clinical-white/10 rounded-full text-clinical-white">
-                <X size={24} />
-              </button>
-            </div>
+          <>
+            {/* Blurred Background Overlay */}
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-sm lg:hidden"
+            />
 
-            {/* Sidebar Navigation */}
-            <nav className="flex-1 flex flex-col justify-center px-8">
-              {menuItems.map((item, index) => (
-                <motion.div
-                  key={item.name}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 + 0.2 }}
-                  className="border-b border-clinical-white/5 py-6"
+            {/* Side Drawer */}
+            <motion.div 
+              initial={{ x: "100%" }} 
+              animate={{ x: 0 }} 
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed top-0 right-0 bottom-0 z-[100] w-full sm:w-[400px] bg-botanical-green shadow-2xl border-l border-clinical-white/10 flex flex-col lg:hidden"
+            >
+              {/* Sidebar Header */}
+              <div className="flex justify-between items-center px-8 py-8 border-b border-clinical-white/10">
+                <div className="flex items-center gap-3">
+                  <Image 
+                    src="/logo.png" 
+                    alt="Natural Cure Logo" 
+                    width={20} 
+                    height={20} 
+                    className="object-contain brightness-0 invert opacity-60" 
+                  />
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-clinical-white/80 font-bold">Index</span>
+                </div>
+                <button 
+                  onClick={() => setIsOpen(false)} 
+                  className="p-3 bg-clinical-white/5 hover:bg-clinical-white/10 transition-colors rounded-full text-clinical-white"
                 >
-                  <Link 
-                    href={item.href}
-                    onClick={() => setIsOpen(false)}
-                    className="group flex items-center justify-between"
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Sidebar Navigation */}
+              <nav className="flex-1 flex flex-col px-8 py-6 gap-2 overflow-y-auto">
+                {menuItems.map((item, index) => (
+                  <motion.div
+                    key={item.name}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 + 0.1 }}
                   >
-                    <div className="flex items-baseline gap-4">
-                      <span className="text-clinical-white/20 font-serif italic text-lg">0{index + 1}</span>
-                      <span className={`text-5xl font-serif tracking-tighter transition-all ${
-                        pathname === item.href ? "text-clinical-white italic" : "text-clinical-white/50 group-hover:text-clinical-white"
-                      }`}>
-                        {item.name}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {item.name === "Account" && cartCount > 0 && (
-                        <span className="text-[10px] bg-clinical-white/10 px-3 py-1 rounded-full text-clinical-white font-bold">
-                          {cartCount} Update
+                    <Link 
+                      href={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className="group flex items-center justify-between py-5 border-b border-clinical-white/5"
+                    >
+                      <div className="flex items-center gap-6">
+                        <span className="text-clinical-white/20 font-serif italic text-sm">0{index + 1}</span>
+                        <span className={`text-3xl font-serif tracking-tight transition-all ${
+                          pathname === item.href ? "text-clinical-white italic" : "text-clinical-white/70 group-hover:text-clinical-white"
+                        }`}>
+                          {item.name}
                         </span>
-                      )}
-                      <ArrowRight className="text-clinical-white opacity-0 group-hover:opacity-100 transition-all -translate-x-4 group-hover:translate-x-0" />
-                    </div>
-                  </Link>
-                </motion.div>
-              ))}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {item.name === "Account" && cartCount > 0 && (
+                          <span className="text-[9px] bg-clinical-white text-botanical-green px-2 py-1 rounded-full font-bold">
+                            {cartCount}
+                          </span>
+                        )}
+                        <ArrowRight className="text-clinical-white/40 group-hover:text-clinical-white transition-all -translate-x-2 group-hover:translate-x-0 opacity-0 group-hover:opacity-100" size={18} />
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </nav>
 
-              {/* DYNAMIC AUTH BUTTON (Login/Logout) */}
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
-                className="mt-12"
-              >
-                {user ? (
-                  <button 
-                    onClick={handleLogout}
-                    className="flex items-center gap-4 text-clinical-white/40 hover:text-red-400 transition-colors uppercase text-[10px] tracking-[0.4em] font-bold"
-                  >
-                    <LogOut size={16} /> Logout
-                  </button>
-                ) : (
-                  <Link 
-                    href="/account"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-4 text-clinical-white uppercase text-[10px] tracking-[0.4em] font-bold border border-clinical-white/20 w-fit px-6 py-3 rounded-full hover:bg-clinical-white hover:text-botanical-green transition-all"
-                  >
-                    <User size={16} /> Login
-                  </Link>
-                )}
-              </motion.div>
-            </nav>
+              {/* Sidebar Footer & Auth Logic */}
+              <div className="mt-auto border-t border-clinical-white/10 bg-black/10">
+                {/* Dynamic Login/Logout Button */}
+                <div className="px-8 py-6 border-b border-clinical-white/5">
+                  {user ? (
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full flex items-center justify-between group"
+                    >
+                      <span className="flex items-center gap-3 text-clinical-white/60 group-hover:text-red-400 transition-colors uppercase text-[10px] tracking-[0.3em] font-bold">
+                        <LogOut size={16} /> Logout
+                      </span>
+                    </button>
+                  ) : (
+                    <Link 
+                      href="/account"
+                      onClick={() => setIsOpen(false)}
+                      className="w-full flex items-center justify-between group"
+                    >
+                      <span className="flex items-center gap-3 text-clinical-white uppercase text-[10px] tracking-[0.3em] font-bold transition-colors">
+                        <User size={16} /> Client Login
+                      </span>
+                      <ArrowRight size={16} className="text-clinical-white/40 group-hover:text-clinical-white transition-colors" />
+                    </Link>
+                  )}
+                </div>
 
-            {/* Sidebar Footer */}
-            <div className="p-8 border-t border-clinical-white/10 grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-clinical-white/30 mb-2">Apothecary</p>
-                <p className="text-xs text-clinical-white/70 font-serif lowercase tracking-widest leading-none">naturalcureherbalmedicine.com</p>
+                {/* Brand Info */}
+                <div className="px-8 py-6 flex justify-between items-end">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-widest text-clinical-white/30 mb-1.5">Apothecary</p>
+                    <p className="text-[11px] text-clinical-white/70 font-serif lowercase tracking-widest leading-none">naturalcure</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[9px] uppercase tracking-widest text-clinical-white/30 mb-1.5">Ethics</p>
+                    <p className="text-[11px] text-clinical-white/70 italic leading-none">Clinical Purity.</p>
+                  </div>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-[10px] uppercase tracking-widest text-clinical-white/30 mb-2">Ethics</p>
-                <p className="text-xs text-clinical-white/70 italic leading-none">Clinical Purity.</p>
-              </div>
-            </div>
-          </motion.div>
+
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>

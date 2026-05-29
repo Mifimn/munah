@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Play, Pause, User, Volume2 } from "lucide-react";
 
 // --- THE REVIEW DATA ---
@@ -9,19 +9,36 @@ const REVIEWS = [
     id: 0,
     name: "Ayinde",
     quote: "The remedies for brain health and memory have been incredibly effective. Thank you for the professional guidance!",
-    audioSrc: "/audio/review1.opus" // WhatsApp voice note from Ayinde
+    product: "Sahur gruel and camel milk",
+    audioSrc: "/audio/review1.opus" 
   },
   {
     id: 1,
     name: "Ummu Anas",
     quote: "I am so happy with the results that I had to leave a review on Google. Truly wonderful natural products.",
-    audioSrc: "/audio/review2.opus" // WhatsApp voice note from Ummu Anas
+    product: "Sahur gruel",
+    audioSrc: "/audio/review2.opus" 
   },
   {
     id: 2,
     name: "International Client",
     quote: "We really miss the pure camel milk here in Malawi! The quality is unmatched and we need an agent here.",
-    audioSrc: "/audio/review3.opus" // WhatsApp voice note from Malawi
+    product: "Camel milk and Sahur gruel",
+    audioSrc: "/audio/review3.opus" 
+  },
+  {
+    id: 3,
+    name: "Morenikeji",
+    quote: "This natural herbal medicine has been life-changing for me. I highly recommend these products to everyone!",
+    product: "Sahur gruel and weight gain powder",
+    audioSrc: "/audio/review4.opus" 
+  },
+  {
+    id: 4,
+    name: "Mr. Kingsley Atuegwu",
+    quote: "The raw camel milk is incredibly fresh and pure. The quality of these natural products is truly exceptional.",
+    product: "Raw camel milk",
+    audioSrc: "/audio/review5.opus" 
   }
 ];
 
@@ -31,6 +48,55 @@ export default function AudioTestimonial() {
   
   const audioRefs = useRef<(HTMLAudioElement | null)[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const hasAttemptedAutoplay = useRef(false);
+
+  // --- SMART AUTOPLAY WITH FALLBACK ---
+  useEffect(() => {
+    // Find Morenikeji's index in the array
+    const autoPlayIndex = REVIEWS.findIndex(review => review.name === "Morenikeji");
+    
+    // Small delay ensures the refs are fully attached to the DOM before trying
+    const timer = setTimeout(() => {
+      const targetAudio = audioRefs.current[autoPlayIndex];
+
+      if (targetAudio && !hasAttemptedAutoplay.current) {
+        hasAttemptedAutoplay.current = true;
+        
+        const attemptPlay = async () => {
+          try {
+            // 1. Try to play immediately
+            await targetAudio.play();
+            setPlayingId(autoPlayIndex);
+          } catch (error) {
+            console.warn("Browser blocked instant autoplay. Waiting for first interaction...");
+            
+            // 2. If blocked, wait for the user to click/tap/scroll anywhere on the site
+            const playOnInteract = async () => {
+              try {
+                await targetAudio.play();
+                setPlayingId(autoPlayIndex);
+              } catch (e) {
+                // Ignore if it still fails
+              } finally {
+                // Remove the listeners so it only happens once
+                document.removeEventListener("click", playOnInteract);
+                document.removeEventListener("touchstart", playOnInteract);
+                document.removeEventListener("scroll", playOnInteract);
+              }
+            };
+
+            document.addEventListener("click", playOnInteract);
+            document.addEventListener("touchstart", playOnInteract);
+            document.addEventListener("scroll", playOnInteract, { once: true });
+          }
+        };
+
+        attemptPlay();
+      }
+    }, 500); // 500ms delay to ensure elements are mounted
+
+    return () => clearTimeout(timer);
+  }, []);
 
   const togglePlay = (index: number) => {
     const targetAudio = audioRefs.current[index];
@@ -66,7 +132,7 @@ export default function AudioTestimonial() {
       <div 
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory gap-6 w-full max-w-[1200px] pb-2 md:grid md:grid-cols-3 md:overflow-visible no-scrollbar"
+        className="flex overflow-x-auto snap-x snap-mandatory gap-6 w-full max-w-[1200px] pb-2 md:grid md:grid-cols-2 lg:grid-cols-3 md:overflow-visible no-scrollbar"
       >
         {REVIEWS.map((review, index) => (
           <div 
@@ -81,14 +147,20 @@ export default function AudioTestimonial() {
             />
 
             <div>
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-4 mb-5">
                 <div className="w-12 h-12 shrink-0 bg-botanical-green/10 rounded-full flex items-center justify-center text-botanical-green">
                   <User size={20} />
                 </div>
                 <div>
                   <h4 className="font-serif text-lg text-botanical-green">{review.name}</h4>
-                  <p className="text-[10px] uppercase tracking-widest text-botanical-green/50 font-bold flex items-center gap-1">
-                    <Volume2 size={10} /> WhatsApp Voice Note
+                  
+                  {/* Dynamic Product Caption */}
+                  <p className="text-[9px] uppercase tracking-widest text-botanical-green/50 font-bold flex items-start gap-1.5 leading-[1.4] mt-1">
+                    <Volume2 size={12} className="shrink-0 mt-[1px]" />
+                    <span>
+                      Customer feedback about "Naturalcureherbalmedicine" <br />
+                      <span className="text-botanical-green/80">{review.product}</span>
+                    </span>
                   </p>
                 </div>
               </div>
@@ -110,7 +182,7 @@ export default function AudioTestimonial() {
       </div>
 
       {/* Slider Indicators for Mobile View */}
-      <div className="flex flex-col items-center mt-4 md:hidden">
+      <div className="flex flex-col items-center mt-6 md:hidden">
         <div className="flex gap-2 mb-2">
           {REVIEWS.map((_, idx) => (
             <div 

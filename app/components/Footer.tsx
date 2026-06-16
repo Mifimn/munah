@@ -31,7 +31,7 @@ export default function Footer() {
                 alt="Natural Cure Logo" 
                 width={18} 
                 height={18} 
-                className="object-contain brightness-0 invert opacity-60" 
+                className="object-contain" 
               />
               <span className="font-serif text-lg tracking-widest lowercase">
                 naturalcureherbalmedicine

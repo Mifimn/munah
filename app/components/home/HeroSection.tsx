@@ -17,14 +17,14 @@ export default function HeroSection() {
         className="absolute top-0 left-0 z-30 pt-8 sm:pt-12 px-6 sm:px-12 w-full flex justify-start"
       >
         <Link href="/" className="flex items-center gap-3 group cursor-pointer">
-          <div className="bg-clinical-white/10 backdrop-blur-md p-2 rounded-full border border-clinical-white/20 group-hover:bg-clinical-white/20 transition-all duration-500">
-            {/* REPLACED LEAF ICON WITH IMAGE LOGO */}
+          {/* Removed background, borders, and padding. Increased width/height to compensate */}
+          <div className="transition-all duration-500 group-hover:opacity-80">
             <Image 
               src="/logo.png" 
               alt="Natural Cure Logo" 
-              width={24} 
-              height={24} 
-              className="object-contain brightness-0 invert" 
+              width={36} 
+              height={36} 
+              className="object-contain rounded-full" 
             />
           </div>
           <span className="font-serif text-base sm:text-lg tracking-widest text-clinical-white lowercase opacity-80 group-hover:opacity-100 transition-opacity">

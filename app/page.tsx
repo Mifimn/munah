@@ -1,6 +1,7 @@
 import HeroSection from "./components/home/HeroSection";
 import BrandStory from "./components/home/BrandStory";
 import CategoryGrid from "./components/home/CategoryGrid";
+import ProductVideoShowcase from "./components/ProductVideoShowcase"; // Imported here
 import Testimonials from "./components/home/Testimonials";
 import AudioTestimonial from "./components/AudioTestimonial"; 
 import AudioNotification from "./components/AudioNotification"; 
@@ -18,6 +19,9 @@ export default function Home() {
       <BrandStory />
 
       <CategoryGrid /> 
+
+      {/* NEW: Cinematic Video Showcase of all products */}
+      <ProductVideoShowcase />
 
       <section id="patient-audio" className="w-full py-20 px-6 bg-clinical-white border-y border-botanical-green/5">
         <div className="max-w-[1200px] mx-auto flex flex-col items-center text-center">

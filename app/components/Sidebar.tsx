@@ -86,13 +86,14 @@ export default function Sidebar() {
             animate={{ opacity: showBrand ? 1 : 0, scale: showBrand ? 1 : 0.8 }}
             className="pointer-events-auto"
           >
-            <Link href="/" className="group flex items-center justify-center bg-botanical-green/10 backdrop-blur-md p-2 rounded-full border border-botanical-green/20 hover:bg-botanical-green transition-all duration-500">
+            {/* Removed padding, borders, and background from the logo wrapper */}
+            <Link href="/" className="group flex items-center justify-center hover:opacity-80 transition-all duration-500">
                <Image 
                 src="/logo.png" 
                 alt="Natural Cure Logo" 
-                width={28} 
-                height={28} 
-                className="object-contain"
+                width={36} 
+                height={36} 
+                className="object-contain rounded-full"
               />
             </Link>
           </motion.div>
@@ -157,14 +158,15 @@ export default function Sidebar() {
               className="fixed top-0 right-0 bottom-0 z-[100] w-full sm:w-[400px] bg-botanical-green shadow-2xl border-l border-clinical-white/10 flex flex-col lg:hidden"
             >
               {/* Sidebar Header */}
-              <div className="flex justify-between items-center px-8 py-8 border-b border-clinical-white/10">
+              <div className="flex justify-between items-center px-5 py-5 border-b border-clinical-white/10">
                 <div className="flex items-center gap-3">
+                  {/* Removed brightness-0 invert opacity-60 */}
                   <Image 
                     src="/logo.png" 
                     alt="Natural Cure Logo" 
-                    width={20} 
-                    height={20} 
-                    className="object-contain brightness-0 invert opacity-60" 
+                    width={28} 
+                    height={28} 
+                    className="object-contain rounded-full" 
                   />
                   <span className="text-[10px] uppercase tracking-[0.2em] text-clinical-white/80 font-bold">Index</span>
                 </div>

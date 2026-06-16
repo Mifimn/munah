@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Minus, Star, ArrowUpRight, ChevronDown, Leaf, Droplet, Loader2 } from "lucide-react";
+import { Plus, Minus, ArrowUpRight, ChevronDown, Leaf, Droplet, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase"; 
@@ -290,23 +290,6 @@ export default function ProductDetails({ params }: { params: Promise<{ slug: str
                 </AnimatePresence>
               </div>
             </div>
-          </motion.div>
-
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mt-20 p-8 sm:p-10 bg-botanical-green/5 border border-botanical-green/10"
-          >
-            <div className="flex gap-1.5 mb-6 text-botanical-green/90">
-              {[...Array(5)].map((_, i) => <Star key={i} size={18} fill="currentColor" strokeWidth={0} />)}
-            </div>
-            <p className="font-serif text-xl sm:text-2xl lg:text-3xl text-botanical-green italic mb-8 leading-relaxed">
-              "The quality of this remedy is incomparable. You can sense the wild botanical origin. It has become a staple in my health protocol."
-            </p>
-            <p className="text-xs uppercase tracking-widest text-botanical-green/60 font-semibold">
-              — Verified Case Study <span className="opacity-60 ml-2">Clinical Patient</span>
-            </p>
           </motion.div>
 
         </div>

@@ -7,37 +7,37 @@ import { Play, Pause, User, Volume2 } from "lucide-react";
 const REVIEWS = [
   {
     id: 0,
-    name: "Ayinde",
-    quote: "The remedies for brain health and memory have been incredibly effective. Thank you for the professional guidance!",
-    product: "Sahur gruel and camel milk",
+    name: "Customer 1",
+    quote: "The sahur gruel is very okay and the fonyo is good. I still have the camel milk and plenty of the infection flusher remaining.",
+    product: "Sahur Gruel, Fonyo, Camel Milk & Infection Flusher",
     audioSrc: "/audio/review1.opus" 
   },
   {
     id: 1,
-    name: "Ummu Anas",
-    quote: "I am so happy with the results that I had to leave a review on Google. Truly wonderful natural products.",
-    product: "Sahur gruel",
+    name: "Customer 2",
+    quote: "I finished eating the product before you even told me to! It is so sweet and tastes very good. I will definitely ask for more.",
+    product: "Natural Herbal Products",
     audioSrc: "/audio/review2.opus" 
   },
   {
     id: 2,
-    name: "International Client",
-    quote: "We really miss the pure camel milk here in Malawi! The quality is unmatched and we need an agent here.",
-    product: "Camel milk and Sahur gruel",
+    name: "Customer 3",
+    quote: "I have seen real changes in my body system. The sahur gruel is very relaxing and nourishing, and I completely finished the camel milk.",
+    product: "Sahur Gruel & Camel Milk",
     audioSrc: "/audio/review3.opus" 
   },
   {
     id: 3,
     name: "Morenikeji",
-    quote: "This natural herbal medicine has been life-changing for me. I highly recommend these products to everyone!",
-    product: "Sahur gruel and weight gain powder",
+    quote: "I seriously love your products! The sahur gruel and weight gain powder are perfectly okay for the body. May the Almighty give you more knowledge.",
+    product: "Sahur Gruel & Weight Gain Powder",
     audioSrc: "/audio/review4.opus" 
   },
   {
     id: 4,
-    name: "Mr. Kingsley Atuegwu",
-    quote: "The raw camel milk is incredibly fresh and pure. The quality of these natural products is truly exceptional.",
-    product: "Raw camel milk",
+    name: "Customer 5",
+    quote: "My daughter confirmed that the honey and camel milk are completely original. Thank you for assuring us that consuming it raw is safe and pure.",
+    product: "Original Honey & Raw Camel Milk",
     audioSrc: "/audio/review5.opus" 
   }
 ];

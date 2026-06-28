@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import Link from "next/link"; // Imported Next.js Link
+import Link from "next/link"; 
 
 // --- THE VIDEO PLAYLIST ---
 const PRODUCT_VIDEOS = [
@@ -15,11 +15,28 @@ const PRODUCT_VIDEOS = [
 
 export default function ProductVideoShowcase() {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  
+  // We use a ref array to control all videos directly
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   // Moves to the next video in the array, loops back to 0 at the end
   const handleVideoEnd = () => {
     setCurrentVideoIndex((prev) => (prev + 1) % PRODUCT_VIDEOS.length);
   };
+
+  // Smart Playback Control: Only play the active video, pause the rest
+  useEffect(() => {
+    videoRefs.current.forEach((video, index) => {
+      if (!video) return;
+      
+      if (index === currentVideoIndex) {
+        video.currentTime = 0; // Start from the beginning
+        video.play().catch(e => console.log("Autoplay blocked:", e));
+      } else {
+        video.pause();
+      }
+    });
+  }, [currentVideoIndex]);
 
   return (
     <section className="w-full bg-earth-silk py-20 px-6 sm:px-12 flex flex-col items-center">
@@ -37,14 +54,14 @@ export default function ProductVideoShowcase() {
             The Complete Collection
           </p>
           <h2 className="text-3xl sm:text-5xl font-serif text-botanical-green leading-tight mb-6 capitalize">
-            Natural Herbal Medicine Cure
+            Natural Cure Herbal Medicine
           </h2>
           <p className="text-botanical-green/80 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
             Every remedy, from our wild honey to our pure camel milk, is hand-formulated with ancestral wisdom and clinical precision. Witness the purity of our entire botanical range.
           </p>
         </motion.div>
 
-        {/* Video Player Wrapper - Height Increased Here */}
+        {/* Video Player Wrapper - All videos stack inside here */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
@@ -52,24 +69,27 @@ export default function ProductVideoShowcase() {
           transition={{ duration: 0.8, delay: 0.2 }}
           className="relative w-full h-[500px] md:h-[650px] lg:h-[750px] rounded-sm overflow-hidden shadow-xl border border-botanical-green/10 bg-botanical-green mb-12 group"
         >
-          <video 
-            key={PRODUCT_VIDEOS[currentVideoIndex]} // Forces React to reload the video source properly
-            autoPlay 
-            muted 
-            playsInline
-            preload="auto" // Forces browser to load the video data fast
-            onEnded={handleVideoEnd}
-            className="w-full h-full object-cover"
-          >
-            <source src={PRODUCT_VIDEOS[currentVideoIndex]} type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
+          {/* We render ALL videos, but only show the active one via CSS opacity */}
+          {PRODUCT_VIDEOS.map((src, index) => (
+            <video 
+              key={src}
+              ref={(el) => { videoRefs.current[index] = el; }}
+              src={src}
+              muted 
+              playsInline
+              preload="auto" 
+              onEnded={handleVideoEnd}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
+                index === currentVideoIndex ? "opacity-100 z-10" : "opacity-0 z-0"
+              }`}
+            />
+          ))}
 
           {/* Subtle Inner Shadow for Luxury Feel */}
-          <div className="absolute inset-0 shadow-[inset_0_0_50px_rgba(0,0,0,0.1)] pointer-events-none" />
+          <div className="absolute inset-0 shadow-[inset_0_0_50px_rgba(0,0,0,0.1)] pointer-events-none z-20" />
 
           {/* Slideshow Indicators (Dots) */}
-          <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3 z-20">
+          <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3 z-30">
             {PRODUCT_VIDEOS.map((_, index) => (
               <button
                 key={index}
@@ -85,7 +105,7 @@ export default function ProductVideoShowcase() {
           </div>
         </motion.div>
 
-        {/* Call to Action - Changed to Next.js Link */}
+        {/* Call to Action */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

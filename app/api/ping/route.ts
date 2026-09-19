@@ -8,7 +8,7 @@ export async function GET() {
   );
 
   // Query a single row from any table
-  const { data, error } = await supabase.from('your_table_name').select('id').limit(1);
+  const { data, error } = await supabase.from('profiles').select('id').limit(1);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ status: 'active', timestamp: new Date().toISOString() });
